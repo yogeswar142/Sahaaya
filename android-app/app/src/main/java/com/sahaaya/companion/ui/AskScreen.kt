@@ -146,15 +146,6 @@ fun AskScreen(
                     tint = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal
                 )
             },
-            trailingIcon = {
-                IconButton(onClick = startVoiceRecognition) {
-                    Icon(
-                        Icons.Default.Mic,
-                        contentDescription = Strings.voiceButtonDesc(language),
-                        tint = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal
-                    )
-                }
-            },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(

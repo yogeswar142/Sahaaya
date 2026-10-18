@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/Banner.png" alt="Sahaaya Banner" width="100%">
+</p>
+
 # Sahaaya (సహాయ / सहाय)
 ### Frontline Health-Worker Clinical Companion for Low-Connectivity Areas
 
@@ -19,28 +23,29 @@ Built for the **[Talent AP Mega Hackathon 2026](https://talentap.in/2026/MegaHac
 
 ---
 
-## 🛡️ 3-Tier Safety-First Architecture
+## 🛡️ Safety-First & Parallel Architecture
 
-Unlike generic cloud LLM chatbots that require constant 4G connectivity and risk hallucinating lethal drug dosages, Sahaaya employs a deterministic, zero-hallucination paramedical defense pipeline:
+Unlike generic cloud LLM chatbots that require constant 4G connectivity and risk hallucinating lethal drug dosages, Sahaaya employs a deterministic, zero-hallucination paramedical defense pipeline paired with a parallel household visit engine:
 
 ```
-[ Frontline Worker Input (Voice / Multilingual Text) ]
+========================= PRIMARY WORKFLOW: QUERY SAFETY & RETRIEVAL =========================
+[ Frontline Worker Query (Voice Mic / Multilingual Text) ]
                         │
                         ▼
 ┌──────────────────────────────────────────────────────────────┐
-│  LAYER 1: DETERMINISTIC DANGER RULE ENGINE                   │
+│  1. DANGER-SIGN RULE ENGINE [CURRENT]                        │
 │  • Hard-coded regex & 367 multilingual tokens (EN/HI/TE)     │
 │  • 100% Zero-Delay Escalation (Fires BEFORE any retrieval)   │
 └───────────────────────┬──────────────────────────────────────┘
                         │
             ┌───────────┴───────────┐
-      [Danger Detected]       [No Danger]
+     [Emergency Detected]     [No Danger Detected]
             │                       │
             ▼                       ▼
 ┌───────────────────────┐ ┌────────────────────────────────────┐
-│ 🚨 RED REFER NOW CARD │ │  LAYER 2: INTENT SAFETY GATE       │
-│ • MoHFW Section Cited │ │  • Detects Dosage / Antibiotics    │
-│ • 1-Tap 108 Emergency │ │  • Enforces ASHA Non-Prescribing   │
+│ 🚨 REFER NOW & 108    │ │  2. INTENT SAFETY GATE [CURRENT]   │
+│ • Red Screen Alert    │ │  • Detects Dosage & Antibiotics    │
+│ • 1-Tap Emergency     │ │  • Enforces ASHA Non-Prescribing   │
 │   Referral Slip (SMS) │ └─────────────────┬──────────────────┘
 └───────────────────────┘                   │
                                 ┌───────────┴───────────┐
@@ -48,16 +53,63 @@ Unlike generic cloud LLM chatbots that require constant 4G connectivity and risk
                                 │                       │
                                 ▼                       ▼
                      ┌─────────────────────┐ ┌─────────────────────────┐
-                     │ ⚠️ PHYSICIAN REDIRECT│ │ LAYER 3: KOTLIN BM25    │
-                     │ Strict Refusal to   │ │ • Synonym Expansion     │
-                     │ Prevent Malpractice │ │ • Cited Protocol Answer │
-                     └─────────────────────┘ │ • 0% Hallucination      │
-                                             └─────────────────────────┘
+                     │ ⚠️ PHYSICIAN REDIRECT│ │ 3. OFFLINE BM25 [CURRENT│
+                     │ Strict Refusal to   │ │ • Pure Kotlin (0.53 ms) │
+                     │ Prevent Malpractice │ │ • Reads Local Storage   │
+                     └─────────────────────┘ └───────────┬─────────────┘
+                                                         │
+                                   ┌─────────────────────┴──────────────────┐
+                         [Score >= Threshold]                        [Low Score]
+                                   │                                        │
+                                   ▼                                        ▼
+                     ┌───────────────────────────┐             ┌─────────────────────────┐
+                     │ ✅ GROUNDED ANSWER [CURR] │             │ ℹ️ SAFE FALLBACK [CURR] │
+                     │ • Exact Protocol Section  │             │ • 0% Hallucination      │
+                     │ • MoHFW Page ID Citation  │             │ • Consult ANM / Doctor  │
+                     └─────────────┬─────────────┘             └─────────────────────────┘
+                                   │ (Roadmap)
+                                   ▼
+                     ┌ - - - - - - - - - - - - - ┐
+                     ┆ ╌ ON-DEVICE SLM [PLANNED] ┆
+                     ┆ • Vernacular Dialogue     ┆
+                     ┆ • Pre-cached Models       ┆
+                     └ - - - - - - - - - - - - - ┘
+
+======================== PARALLEL WORKFLOW: VISIT PRIORITISATION ========================
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│  HOUSEHOLD REGISTER [CURRENT]                                                          │
+│  • Local On-Device SQLite / CSV (30+ Beneficiaries: MCP Cards, EDD, Immunisation)     │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │ Ingests Records
+                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│  VISIT PRIORITISATION ENGINE [CURRENT]                                                 │
+│  • Clinical Urgency Triage: 1. Danger Flags ➔ 2. Overdue Follow-ups ➔ 3. Scheduled    │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │ Generates Action Plan
+                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│  DAILY PRIORITISED VISIT LIST [CURRENT]                                                │
+│  • Screen 2 Frontline Action Plan (High-Risk Beneficiaries Ranked First)               │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            ┆ Optional Export (Roadmap)
+                                            ▼
+┌ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -┐
+┆  ╌ OPTIONAL PHC SYNC REPORT [PLANNED]                                                  ┆
+┆  • 1-Tap End-of-Day Summary via 2G SMS / Portal Sync                                   ┆
+└ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -┘
 ```
 
-1. **Layer 1: Hard-Coded Danger Rule Engine:** Scans queries across English, Hinglish, and Telugu (Latin script). Covers 27 maternal, newborn, and child danger signs with **100% recall on 367 phrasings**.
-2. **Layer 2: Intent Safety Gate:** Intercepts out-of-scope clinical prescription and dosage questions (e.g., antibiotic syrups) and returns an immediate physician redirect.
-3. **Layer 3: Pure Kotlin BM25 Retriever:** Indexes official government protocols (**MoHFW Revised MCP Card**, **ASHA Induction Module**, **HBNC/HBYC Job Aids**, **HP STOP Diarrhoea Guidance**) and returns exact protocol sections with document and page citations.
+### Component Status (Verified vs Planned)
+- **1. Frontline Input (Speech & Text) `[CURRENT]`:** Offline speech-to-text mic and query input in English, Hindi, and Telugu (Latin script).
+- **2. Danger-Sign Rule Engine `[CURRENT]`:** Deterministic regex across 27 danger signs (**100% recall on 367 phrasings** [1, 2]); immediately triggers Red Screen Alert and 1-Tap 108 Emergency Referral Slip with zero retrieval latency.
+- **3. Intent Safety Gate `[CURRENT]`:** Intercepts prescription and dosage questions (e.g., antibiotic syrups) and returns an immediate physician redirect, strictly enforcing ASHA non-prescribing guidelines [1, 6].
+- **4. Offline BM25 Retrieval `[CURRENT]`:** Pure Kotlin lexical retrieval engine running entirely on-device with zero network permissions. Matches against pre-indexed official government manuals (**MoHFW Revised MCP Card**, **ASHA Induction Module**, **STOP Diarrhoea Guidance**) with exact section and page citations (0.53 ms median latency, 0% hallucination).
+- **5. Parallel Household Engine `[CURRENT]`:** Ingests local household register database and automatically triages daily home visits by clinical risk: **Danger Flags ➔ Overdue Follow-ups ➔ Scheduled Routine Care**.
+- **6. Planned Finale Extensions `[ROADMAP]`:**
+  - **On-Device SLM Rephraser:** Pre-cached small language models for conversational vernacular rephrasing after deterministic protocol grounding.
+  - **Automated 2G SMS Sync:** Background SMS gateway integration to push daily visit summaries to PHC servers in zero-internet hamlets.
+
 
 ---
 

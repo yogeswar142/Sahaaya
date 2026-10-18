@@ -2,7 +2,9 @@
 android-app/build/
 android-app/app/build/
 android-app/.gradle/
+android-app/.kotlin/
 .gradle/
+.kotlin/
 build/
 *.class
 
