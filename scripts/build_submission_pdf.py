@@ -1,5 +1,76 @@
 import pymupdf
 import os
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
+
+def ensure_demo_embed_image():
+    out_path = "docs/p7_demo_embed.png"
+    banner_path = "docs/Banner.png"
+    if not os.path.exists(banner_path):
+        return out_path
+    
+    # Target video screen size: 16:9 ratio (1400 x 788)
+    banner = Image.open(banner_path).convert("RGBA")
+    vw, vh = 1400, 788
+    video_frame = banner.resize((vw, vh), Image.Resampling.LANCZOS)
+
+    # Dark gradient overlays for top title and bottom scrubber
+    overlay = Image.new("RGBA", (vw, vh), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    for y in range(120):
+        alpha = int(170 * (1 - y / 120))
+        draw.line([(0, y), (vw, y)], fill=(0, 0, 0, alpha))
+    for y in range(80):
+        alpha = int(150 * (y / 80))
+        draw.line([(0, vh - 80 + y), (vw, vh - 80 + y)], fill=(0, 0, 0, alpha))
+    video_frame = Image.alpha_composite(video_frame, overlay)
+
+    # Center YouTube Play Button
+    btn_w, btn_h = 150, 102
+    btn_x = (vw - btn_w) // 2
+    btn_y = (vh - btn_h) // 2
+
+    # Shadow for play button
+    shadow = Image.new("RGBA", (vw, vh), (0, 0, 0, 0))
+    s_draw = ImageDraw.Draw(shadow)
+    s_draw.rounded_rectangle([btn_x - 4, btn_y - 2, btn_x + btn_w + 4, btn_y + btn_h + 6], radius=30, fill=(0, 0, 0, 160))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(10))
+    video_frame = Image.alpha_composite(video_frame, shadow)
+
+    # Draw YouTube Red Button
+    draw = ImageDraw.Draw(video_frame)
+    draw.rounded_rectangle([btn_x, btn_y, btn_x + btn_w, btn_y + btn_h], radius=28, fill=(255, 0, 0, 240))
+
+    # White Play Triangle
+    tri_w, tri_h = 42, 48
+    tx = btn_x + (btn_w - tri_w) // 2 + 4
+    ty = btn_y + (btn_h - tri_h) // 2
+    draw.polygon([(tx, ty), (tx, ty + tri_h), (tx + tri_w, ty + tri_h // 2)], fill=(255, 255, 255, 255))
+
+    # Top Title Badge
+    try:
+        font_title = ImageFont.truetype("arialbd.ttf", 26)
+        font_sub = ImageFont.truetype("arial.ttf", 17)
+    except:
+        font_title = ImageFont.load_default()
+        font_sub = font_title
+
+    draw.rounded_rectangle([30, 24, 760, 84], radius=12, fill=(0, 0, 0, 190))
+    draw.ellipse([48, 44, 60, 56], fill=(255, 60, 60, 255))
+    draw.text((72, 34), "Sahaaya - Frontline Health-Worker Companion", font=font_title, fill=(255, 255, 255, 255))
+    draw.text((72, 62), "Official Live Field Demonstration & Benchmarks  |  YouTube: youtu.be/_Yz6aoMcbP4", font=font_sub, fill=(220, 230, 245, 255))
+
+    # Bottom YouTube Scrubber
+    draw.line([(0, vh - 6), (vw, vh - 6)], fill=(80, 80, 80, 200), width=6)
+    draw.line([(0, vh - 6), (360, vh - 6)], fill=(255, 0, 0, 255), width=6)
+    draw.ellipse([355, vh - 11, 365, vh - 1], fill=(255, 0, 0, 255))
+
+    # Bottom Right Pill
+    draw.rounded_rectangle([vw - 260, vh - 62, vw - 30, vh - 22], radius=10, fill=(0, 0, 0, 190))
+    draw.text((vw - 242, vh - 52), "Watch on YouTube ->", font=font_sub, fill=(255, 255, 255, 255))
+
+    video_frame = video_frame.convert("RGB")
+    video_frame.save(out_path, quality=95)
+    return out_path
 
 def build_pdf():
     src_pdf = "scripts/template.pdf" if os.path.exists("scripts/template.pdf") else "Round1_Template submission.pdf"
@@ -283,20 +354,57 @@ def build_pdf():
     # PAGE 7: DEMO & POC VIDEO
     # -------------------------------------------------------------
     p7 = doc[6]
-    p7.add_redact_annot(pymupdf.Rect(100, 345, 620, 398), fill=c_white)
+    c_yt_red = (0.80, 0.05, 0.05)
+    
+    # Redact the old template box starting at y=112 (leaving Live Demonstration at y=83-104 untouched)
+    p7.add_redact_annot(pymupdf.Rect(100, 112, 620, 398), fill=c_white)
     p7.apply_redactions()
 
-    # Video link bar and repo link
-    video_rect = pymupdf.Rect(110, 348, 610, 370)
-    p7.draw_rect(video_rect, fill=(0.955, 0.968, 0.985), color=(0.80, 0.84, 0.90), width=0.75)
-    p7.insert_text((120, 362), "Demo Video Link: [Insert Video Link / Embed]", fontsize=9.2, fontname="hebo", color=c_dark_blue)
-    repo_text = "GitHub: github.com/yogeswar142/Sahaaya"
-    repo_w = pymupdf.get_text_length(repo_text, fontname="hebo", fontsize=8.8)
-    p7.insert_text((395, 362), repo_text, fontsize=8.8, fontname="hebo", color=(0.0, 0.45, 0.75))
-    p7.insert_link({"kind": pymupdf.LINK_URI, "from": pymupdf.Rect(395, 353, 395 + repo_w, 366), "uri": "https://github.com/yogeswar142/Sahaaya"})
+    # Ensure demo embed banner card is generated
+    demo_card_img = ensure_demo_embed_image()
 
-    poc_points = "Working Offline Android POC (app-debug.apk, 16.9 MB) | Grounded on MoHFW/NHM Protocols [1-3] | 100% Danger Recall | Zero Cloud Permissions"
-    p7.insert_text((48, 388), poc_points, fontsize=7.8, fontname="helv", color=(0.3, 0.3, 0.3))
+    # Video Embed Rect (16:9 ratio, width 426, height 240)
+    # Centered horizontally: (720 - 426)/2 = 147 pt
+    img_rect = pymupdf.Rect(147, 106, 573, 346)
+    border_rect = pymupdf.Rect(145, 104, 575, 348)
+    p7.draw_rect(border_rect, fill=c_white, color=(0.12, 0.31, 0.55), width=1.2)
+    if os.path.exists(demo_card_img):
+        p7.insert_image(img_rect, filename=demo_card_img)
+
+    # Clickable link on the whole video embed
+    p7.insert_link({"kind": pymupdf.LINK_URI, "from": border_rect, "uri": "https://youtu.be/_Yz6aoMcbP4"})
+
+    # Action & Links bar below video
+    bar_rect = pymupdf.Rect(55, 353, 665, 375)
+    p7.draw_rect(bar_rect, fill=(0.955, 0.968, 0.985), color=(0.80, 0.84, 0.90), width=0.75)
+
+    # 1. YouTube Link (Left)
+    p7.insert_text((68, 367), "YouTube Demo: ", fontname="hebo", fontsize=8.4, color=c_yt_red)
+    lbl_w1 = pymupdf.get_text_length("YouTube Demo: ", fontname="hebo", fontsize=8.4)
+    yt_url_text = "https://youtu.be/_Yz6aoMcbP4"
+    p7.insert_text((68 + lbl_w1, 367), yt_url_text, fontname="hebo", fontsize=8.4, color=(0.0, 0.35, 0.75))
+    url_w1 = pymupdf.get_text_length(yt_url_text, fontname="hebo", fontsize=8.4)
+    p7.insert_link({"kind": pymupdf.LINK_URI, "from": pymupdf.Rect(68, 356, 68 + lbl_w1 + url_w1, 371), "uri": "https://youtu.be/_Yz6aoMcbP4"})
+
+    # 2. GitHub Link (Center)
+    p7.insert_text((315, 367), "GitHub: ", fontname="hebo", fontsize=8.4, color=c_dark_blue)
+    lbl_w2 = pymupdf.get_text_length("GitHub: ", fontname="hebo", fontsize=8.4)
+    gh_url_text = "github.com/yogeswar142/Sahaaya"
+    p7.insert_text((315 + lbl_w2, 367), gh_url_text, fontname="helv", fontsize=8.4, color=(0.0, 0.35, 0.75))
+    url_w2 = pymupdf.get_text_length(gh_url_text, fontname="helv", fontsize=8.4)
+    p7.insert_link({"kind": pymupdf.LINK_URI, "from": pymupdf.Rect(315, 356, 315 + lbl_w2 + url_w2, 371), "uri": "https://github.com/yogeswar142/Sahaaya"})
+
+    # 3. APK Release Link (Right)
+    p7.insert_text((535, 367), "APK: ", fontname="hebo", fontsize=8.4, color=c_dark_blue)
+    lbl_w3 = pymupdf.get_text_length("APK: ", fontname="hebo", fontsize=8.4)
+    apk_text = "v1.0.0 (16.9 MB)"
+    p7.insert_text((535 + lbl_w3, 367), apk_text, fontname="hebo", fontsize=8.4, color=c_green)
+    apk_w = pymupdf.get_text_length(apk_text, fontname="hebo", fontsize=8.4)
+    p7.insert_link({"kind": pymupdf.LINK_URI, "from": pymupdf.Rect(535, 356, 535 + lbl_w3 + apk_w, 371), "uri": "https://github.com/yogeswar142/Sahaaya/releases/latest"})
+
+    # Bottom POC Points
+    poc_points = "Working Offline Android POC | Grounded on MoHFW/NHM Protocols [1-3] | 100% Danger Recall | Zero Cloud Permissions"
+    p7.insert_text((68, 390), poc_points, fontsize=7.6, fontname="helv", color=(0.35, 0.35, 0.35))
 
     doc.save(out_pdf)
     doc.close()
