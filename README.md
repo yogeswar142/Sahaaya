@@ -7,6 +7,7 @@
 
 [![Talent AP Mega Hackathon 2026](https://img.shields.io/badge/Talent%20AP%20Mega%20Hackathon%202026-Problem%20H5-0288D1?style=for-the-badge)](https://talentap.in/2026/MegaHackathon-Oct26/)
 [![Team](https://img.shields.io/badge/Team-Vizag%20Mavericks%20%5BTEAM--001245%5D-1F4E8C?style=for-the-badge)](#team-vizag-mavericks)
+[![Download Latest APK](https://img.shields.io/badge/Download-Latest%20APK%20(v1.0.0)-E65100?style=for-the-badge&logo=android&logoColor=white)](https://github.com/yogeswar142/Sahaaya/releases/latest)
 [![Offline First](https://img.shields.io/badge/Network-100%25%20Offline%20(Airplane%20Mode)-2E7D32?style=for-the-badge)](#measured-hardware-benchmarks)
 [![Danger Recall](https://img.shields.io/badge/Safety-100%25%20Danger%20Recall-D32F2F?style=for-the-badge)](#3-tier-safety-first-architecture)
 [![Response Latency](https://img.shields.io/badge/Median%20Latency-0.53%20ms-00796B?style=for-the-badge)](#measured-hardware-benchmarks)
@@ -198,7 +199,14 @@ Sahaaya/
 
 ## 🚀 Quick Start & Build Instructions
 
-### Prerequisites
+### 0. Quick Download (Install on Android Device)
+Evaluators, judges, and field testers can download and install the standalone APK directly without compiling from source:
+- 📲 **[Download Sahaaya v1.0.0 APK (16.9 MB)](https://github.com/yogeswar142/Sahaaya/releases/latest/download/Sahaaya-v1.0.0.apk)**
+- 📦 **[View GitHub Releases & Release Notes](https://github.com/yogeswar142/Sahaaya/releases/latest)**
+
+*(Requires Android 8.0+ / API 26+. Works 100% offline in Airplane Mode with zero cloud dependencies).*
+
+### Prerequisites (For Developers Building from Source)
 - **JDK 17 LTS**
 - **Android SDK (API 34 / 35)**
 - **Gradle 8.14** (bundled via `./android-app/gradlew.bat`)
