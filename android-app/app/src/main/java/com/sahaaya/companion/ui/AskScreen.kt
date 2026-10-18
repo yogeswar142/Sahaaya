@@ -1,6 +1,8 @@
 package com.sahaaya.companion.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,142 +18,171 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
 import com.sahaaya.companion.R
 import com.sahaaya.companion.core.PipelineOutput
 import com.sahaaya.companion.core.SahaayaPipeline
+import com.sahaaya.companion.ui.i18n.AppLanguage
+import com.sahaaya.companion.ui.i18n.Strings
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AskScreen(
     pipeline: SahaayaPipeline,
+    language: AppLanguage,
+    isDarkTheme: Boolean,
+    initialQuery: String? = null,
     modifier: Modifier = Modifier
 ) {
-    var queryText by remember { mutableStateOf("") }
+    var queryText by remember { mutableStateOf(initialQuery ?: "") }
     var currentOutput by remember { mutableStateOf<PipelineOutput?>(null) }
 
-    val quickPrompts = listOf(
-        "Vaginal bleeding pregnant",
-        "Baby ribs sinking fast breathing",
-        "How much ORS for diarrhoea",
-        "What vaccines at birth",
-        "Amoxicillin syrup dose 1 yr"
-    )
+    // Run pipeline if initial query provided
+    LaunchedEffect(initialQuery) {
+        if (!initialQuery.isNullOrBlank()) {
+            queryText = initialQuery
+            currentOutput = pipeline.process(initialQuery)
+        }
+    }
+
+    val quickPrompts = Strings.quickPrompts(language)
+
+    val logoRes = if (isDarkTheme) {
+        R.drawable.ic_sahaaya_logo
+    } else {
+        R.drawable.ic_sahaaya_symbol_bright
+    }
+
+    val bgModifier = if (isDarkTheme) {
+        Modifier.background(BackgroundDark)
+    } else {
+        Modifier.background(BackgroundLight)
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(BackgroundLight)
+            .then(bgModifier)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
         Text(
-            text = "Ask Sahaaya Protocol Guide",
+            text = Strings.askHeader(language),
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.Bold,
-                color = SecondaryNavy
+                color = if (isDarkTheme) TextPrimaryDark else SecondaryNavy
             )
         )
         Text(
-            text = "100% Offline | MoHFW & NHM Protocols | Safety-First Escalation",
-            style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray),
+            text = Strings.askSubheader(language),
+            style = MaterialTheme.typography.bodySmall.copy(
+                color = if (isDarkTheme) TextSecondaryDark else Color.Gray
+            ),
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
-        // Query input field
+        // Search Input Box
         OutlinedTextField(
             value = queryText,
             onValueChange = { queryText = it },
-            placeholder = { Text("Enter symptom, sign or question (English / Hinglish / Telugu)...") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
+            placeholder = {
+                Text(
+                    Strings.searchPlaceholder(language),
+                    fontSize = 13.sp,
+                    color = if (isDarkTheme) TextSecondaryDark else Color.Gray
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = SurfaceWhite,
-                unfocusedContainerColor = SurfaceWhite
+                focusedContainerColor = if (isDarkTheme) SurfaceDark else Color.White,
+                unfocusedContainerColor = if (isDarkTheme) SurfaceDark else Color.White,
+                focusedBorderColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
+                unfocusedBorderColor = if (isDarkTheme) Color(0xFF24364D) else Color(0xFFCBD5E1)
             ),
-            trailingIcon = {
-                IconButton(
-                    onClick = {
-                        if (queryText.isNotBlank()) {
-                            currentOutput = pipeline.process(queryText.trim())
-                        }
-                    }
-                ) {
-                    Icon(Icons.Default.Search, contentDescription = "Search", tint = PrimaryTeal)
-                }
-            }
+            minLines = 2,
+            maxLines = 3
         )
 
-        // Ask Button (Big buttons, short text)
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Big Primary Action Button
         Button(
             onClick = {
                 if (queryText.isNotBlank()) {
-                    currentOutput = pipeline.process(queryText.trim())
+                    currentOutput = pipeline.process(queryText)
                 }
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp)
-                .height(54.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryTeal),
+                .height(48.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
+                contentColor = if (isDarkTheme) Color(0xFF022C28) else Color.White
+            ),
             shape = RoundedCornerShape(12.dp)
         ) {
+            Icon(Icons.Default.Search, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "SEARCH PROTOCOL",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
+                Strings.searchButton(language),
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp
             )
         }
 
-        // Quick symptom test chips
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Quick Sample Chips
         Text(
-            text = "Quick Sample Queries:",
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            text = Strings.quickSamplesLabel(language),
+            style = MaterialTheme.typography.labelMedium.copy(
+                color = if (isDarkTheme) TextSecondaryDark else Color.DarkGray,
+                fontWeight = FontWeight.SemiBold
+            ),
+            modifier = Modifier.padding(bottom = 6.dp)
         )
-        Row(
+
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            quickPrompts.take(2).forEach { prompt ->
+            quickPrompts.forEach { prompt ->
                 SuggestionChip(
                     onClick = {
                         queryText = prompt
                         currentOutput = pipeline.process(prompt)
                     },
-                    label = { Text(prompt, fontSize = 12.sp, maxLines = 1) }
-                )
-            }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            quickPrompts.drop(2).take(2).forEach { prompt ->
-                SuggestionChip(
-                    onClick = {
-                        queryText = prompt
-                        currentOutput = pipeline.process(prompt)
-                    },
-                    label = { Text(prompt, fontSize = 12.sp, maxLines = 1) }
+                    label = { Text(prompt, fontSize = 11.sp, maxLines = 1) },
+                    colors = SuggestionChipDefaults.suggestionChipColors(
+                        containerColor = if (isDarkTheme) SurfaceElevatedDark else Color.White
+                    )
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         // Initial welcome state
         if (currentOutput == null) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                    .padding(top = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDarkTheme) SurfaceDark else Color.White
+                ),
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
@@ -161,25 +192,32 @@ fun AskScreen(
                         .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_sahaaya_logo),
-                        contentDescription = "Sahaaya Logo",
+                    Box(
                         modifier = Modifier
-                            .size(76.dp)
+                            .size(80.dp)
                             .clip(RoundedCornerShape(18.dp))
-                    )
+                            .background(if (isDarkTheme) Color(0xFF041830) else Color(0xFFF1F5F9))
+                            .padding(8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = logoRes),
+                            contentDescription = "Sahaaya Logo",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                     Spacer(modifier = Modifier.height(14.dp))
                     Text(
-                        "Sahaaya Clinical Companion",
+                        Strings.welcomeTitle(language),
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium,
-                        color = SecondaryNavy
+                        color = if (isDarkTheme) TextPrimaryDark else SecondaryNavy
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "Ask clinical queries in English, Hinglish, or Telugu (Latin).\nStrict protocol citations • Hardcoded danger escalations • Zero hallucination",
+                        Strings.welcomeDesc(language),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
+                        color = if (isDarkTheme) TextSecondaryDark else Color.Gray,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
@@ -192,8 +230,12 @@ fun AskScreen(
                 is PipelineOutput.DangerEscalation -> {
                     // Bright Red Card for Emergency Escalation
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = DangerRedLight),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(2.dp, if (isDarkTheme) DangerRedDark else DangerRed, RoundedCornerShape(16.dp)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isDarkTheme) DangerRedDarkBg else DangerRedLight
+                        ),
                         shape = RoundedCornerShape(16.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
@@ -202,50 +244,55 @@ fun AskScreen(
                                 Icon(
                                     Icons.Default.Warning,
                                     contentDescription = "Danger",
-                                    tint = DangerRed,
+                                    tint = if (isDarkTheme) DangerRedDark else DangerRed,
                                     modifier = Modifier.size(32.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(DangerRed)
+                                        .background(if (isDarkTheme) DangerRedDark else DangerRed)
                                         .padding(horizontal = 12.dp, vertical = 6.dp)
                                 ) {
                                     Text(
-                                        text = "EMERGENCY: ${output.actionText}",
+                                        text = Strings.emergencyTitle(language),
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp
+                                        fontSize = 15.sp
                                     )
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "Danger Sign Detected: ${output.rule.dangerSign}",
+                                text = "${Strings.dangerDetected(language)} ${output.rule.dangerSign}",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = DangerRed
+                                    color = if (isDarkTheme) DangerRedDark else DangerRed
                                 )
                             )
                             Text(
-                                text = "Category: ${output.rule.category.uppercase()} EMERGENCY",
-                                style = MaterialTheme.typography.labelMedium.copy(color = Color.DarkGray)
+                                text = "${Strings.categoryLabel(language)} ${output.rule.category.uppercase()}",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    color = if (isDarkTheme) TextSecondaryDark else Color.DarkGray
+                                )
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Immediate Action: Escort woman/child immediately to the nearest First Referral Unit (FRU) or Hospital. Do not wait or self-treat.",
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
+                                text = Strings.immediateAction(language),
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (isDarkTheme) TextPrimaryDark else Color(0xFF0F172A)
+                                )
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            Divider(color = DangerRed.copy(alpha = 0.3f))
+                            HorizontalDivider(color = DangerRed.copy(alpha = 0.3f))
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = output.citation,
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = SecondaryNavy
+                                    color = if (isDarkTheme) TextPrimaryDark else SecondaryNavy
                                 )
                             )
                         }
@@ -253,10 +300,14 @@ fun AskScreen(
                 }
 
                 is PipelineOutput.ScopeRefusal -> {
-                    // Amber Card for Out-of-scope prescription/dosage refusal
+                    // Amber Refusal Card
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = WarningAmberLight),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.5.dp, if (isDarkTheme) WarningAmberDark else WarningAmber, RoundedCornerShape(16.dp)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isDarkTheme) WarningAmberDarkBg else WarningAmberLight
+                        ),
                         shape = RoundedCornerShape(16.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                     ) {
@@ -265,77 +316,95 @@ fun AskScreen(
                                 Icon(
                                     Icons.Default.Info,
                                     contentDescription = "Refusal",
-                                    tint = WarningAmber,
+                                    tint = if (isDarkTheme) WarningAmberDark else WarningAmber,
                                     modifier = Modifier.size(28.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "OUT OF SCOPE - CONSULT DOCTOR",
+                                    text = Strings.outOfScopeTitle(language),
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = WarningAmber
+                                        color = if (isDarkTheme) WarningAmberDark else WarningAmber
                                     )
                                 )
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = output.message,
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = if (isDarkTheme) TextPrimaryDark else Color(0xFF0F172A)
+                                )
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Protocol Safety Policy: Frontline ASHA/ANM workers operate within community protocol boundaries. Prescribing antibiotics and clinical dose calculations are strictly reserved for Medical Officers.",
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color.DarkGray)
+                                text = Strings.outOfScopeDesc(language),
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = if (isDarkTheme) TextSecondaryDark else Color(0xFF475569)
+                                )
                             )
                         }
                     }
                 }
 
                 is PipelineOutput.ProtocolAnswer -> {
-                    // Green / Teal Card for Grounded Protocol Answer
+                    // Green Verified Protocol Match Card
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal, RoundedCornerShape(16.dp)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isDarkTheme) SurfaceDark else Color.White
+                        ),
                         shape = RoundedCornerShape(16.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     Icons.Default.CheckCircle,
-                                    contentDescription = "Verified",
-                                    tint = SuccessGreen,
+                                    contentDescription = "Protocol Match",
+                                    tint = if (isDarkTheme) SuccessGreenDark else SuccessGreen,
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = output.chunk.title,
+                                    text = Strings.verifiedAnswerHeader(language),
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = PrimaryTeal
+                                        color = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal
                                     )
                                 )
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
+                                text = output.chunk.title,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = if (isDarkTheme) TextPrimaryDark else Color(0xFF0F172A)
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
                                 text = output.chunk.text,
-                                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp)
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    lineHeight = 20.sp,
+                                    color = if (isDarkTheme) TextPrimaryDark else Color(0xFF1E293B)
+                                )
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            Divider(color = Color.LightGray)
+                            HorizontalDivider(color = if (isDarkTheme) Color(0xFF24364D) else Color.LightGray)
                             Spacer(modifier = Modifier.height(8.dp))
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(SuccessGreenLight)
+                                    .background(if (isDarkTheme) SuccessGreenDarkBg else SuccessGreenLight)
                                     .padding(8.dp)
                             ) {
                                 Text(
                                     text = output.citationText,
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         fontWeight = FontWeight.SemiBold,
-                                        color = SuccessGreen
+                                        color = if (isDarkTheme) SuccessGreenDark else SuccessGreen
                                     )
                                 )
                             }
@@ -344,21 +413,28 @@ fun AskScreen(
                 }
 
                 is PipelineOutput.OutOfCorpus -> {
-                    // Grey Card for questions outside verified protocol corpus
+                    // Neutral Card for questions outside verified protocol corpus
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEEEEEE)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isDarkTheme) SurfaceElevatedDark else Color(0xFFEEEEEE)
+                        ),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = output.message,
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
+                                text = Strings.notFoundMessage(language),
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isDarkTheme) TextPrimaryDark else Color(0xFF0F172A)
+                                )
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Sahaaya strictly avoids hallucinating answers beyond verified government training manuals.",
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray)
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = if (isDarkTheme) TextSecondaryDark else Color.Gray
+                                )
                             )
                         }
                     }
