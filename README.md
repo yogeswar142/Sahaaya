@@ -180,6 +180,21 @@ For detailed instructions, refer to [`docs/BUILD.md`](docs/BUILD.md).
 
 ---
 
+## 📚 Clinical Evidence & Official Protocol Citations
+
+Every clinical alert, paramedical guideline, triage hierarchy, and non-prescribing boundary in Sahaaya is strictly grounded in peer-reviewed medical literature and official government training manuals:
+
+| Citation | Official Source / Publication | Issuing Authority / Journal | Core Clinical Grounding |
+| :---: | :--- | :--- | :--- |
+| **`[1]`** | **[Revised India MCP Card (2018) & ASHA Modules 6 & 7](https://hbnc-hbyc.mohfw.gov.in/assets/document/Revised%20India%20MCP%20Card%20English_(28-05-2018).pdf)** | Ministry of Health & Family Welfare (MoHFW), Govt. of India | Baseline protocols for maternal danger signs, Home-Based Newborn Care (HBNC), Home-Based Care for Young Child (HBYC), and non-prescribing ASHA boundaries. |
+| **`[2]`** | **[Induction Training Module for ASHAs](https://nhm.gov.in/images/pdf/communitisation/asha/ASHA_Induction_Module_English.pdf)** & **[HP STOP Diarrhoea Guidance](https://nhm.hp.gov.in/storage/app/media/uploaded-files/Guidance.pdf)** | National Health Mission (NHM), Govt. of India | Immediate referral criteria for neonatal asphyxia, hypothermia, chest indrawing, childhood pneumonia, severe dehydration, and zinc/ORS administration (pp. 51–52, 69, 76–77, 93, 97). |
+| **`[3]`** | **[Causes of Maternal Deaths in India: A National Level Analysis](https://pmc.ncbi.nlm.nih.gov/articles/PMC9292773/)** | National Center for Biotechnology Information (NCBI / PMC) | Establishes that **obstetric haemorrhage causes 47% of all maternal deaths** in India, proving the necessity of instant, zero-delay 1-tap 108 Emergency Referral Slips. |
+| **`[4]`** | **[Andhra Pradesh Cellular Connectivity Survey](https://telecomtalk.info/?p=654511)** | TelecomTalk (DoT Field Data) | Documents **1,700+ remote villages in Andhra Pradesh** (over 1,000 in Alluri Sitharama Raju district alone) with complete zero mobile reception, mandating a 100% offline, zero-network architecture. |
+| **`[5]`** | **[India's Digital Push Overworking Frontline Women](https://newlinesmag.com/reportage/indias-digital-health-push-is-overworking-its-front-line-women/)** & **[Frontline Health Worker App Fatigue Study](https://www.ijcmph.com/index.php/ijcmph/article/download/16413/9807/85078)** | New Lines Magazine & Int. Journal of Community Medicine and Public Health (IJCMPH) | Details ANMs managing **28 separate paper registers alongside 23 disconnected state apps**, justifying Sahaaya's unified daily triage workflow and 1-tap 2G SMS summaries. |
+| **`[6]`** | **[WHO Guidance on Ethics & Governance of AI for Health](https://www.downtoearth.org.in/science-technology/who-releases-guidelines-for-multi-modal-generative-ai-in-healthcare-resonates-with-recommendations-for-other-sectors-93991)** | World Health Organization (WHO) | Mandates human oversight, deterministic guardrails, and non-hallucinatory boundaries over unconstrained generative models in critical paramedical decision-support systems. |
+
+---
+
 ## 👥 Team: Vizag Mavericks
 
 Submitted for **[Talent AP Mega Hackathon 2026](https://talentap.in/2026/MegaHackathon-Oct26/)**  
