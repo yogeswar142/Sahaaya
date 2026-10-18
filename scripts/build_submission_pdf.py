@@ -66,18 +66,18 @@ def build_pdf():
     p2.apply_redactions()
 
     prob_bullets = [
-        ("• Frontline Burden & Zero Cellular Connectivity [4, 5]:", "Over 10.29 lakh rural ASHA & ANM workers navigate 1,700+ remote AP villages with zero mobile reception [4], juggling 28 paper registers and 20+ disconnected apps [5]."),
-        ("• Preventable Maternal & Neonatal Deaths [1, 2, 3]:", "Obstetric haemorrhage causes 47% of maternal deaths [3]; missed newborn danger signs (hypothermia, convulsions, chest indrawing) lead to fatal referral delays [1, 2]."),
-        ("• Cloud AI Hallucinations & Malpractice Risks [1, 6]:", "Generic cloud LLMs hallucinate fatal antibiotic dosages, violate non-prescribing ASHA boundaries [1], lack WHO-mandated deterministic safeguards [6], and fail in offline hamlets.")
+        ("• Frontline Burden & Zero Cellular Connectivity:", "Over 10.29 lakh rural ASHA & ANM workers navigate 1,700+ remote AP villages with zero mobile reception [4], juggling 28 paper registers and 20+ disconnected apps [5]."),
+        ("• Preventable Maternal & Neonatal Deaths:", "Obstetric haemorrhage causes 47% of maternal deaths [3]; missed newborn danger signs (hypothermia, convulsions, chest indrawing) lead to fatal referral delays [1, 2]."),
+        ("• Cloud AI Hallucinations & Malpractice Risks:", "Generic cloud LLMs hallucinate fatal antibiotic dosages, violate non-prescribing ASHA boundaries [1], lack WHO-mandated deterministic safeguards [6], and fail in offline hamlets.")
     ]
     y = 120
     for title, desc in prob_bullets:
         y = draw_bullet_block(p2, 55, y, 615, title, desc, font_size=8.3, line_height=10.2, spacing=2.5)
 
     mkt_bullets = [
-        ("• Frontline Scale & National Need [1, 2]:", "10.29 lakh ASHAs and ~2.5 lakh Sub-Centre ANMs across India serving 1,000 population norms, requiring an intuitive, reliable paramedical companion [1]."),
-        ("• Critical Gap in Existing Systems [4, 5]:", "State tools (ANMOL, mSakhi, Kilkari) suffer from cloud latency, sync failures in zero-signal areas [4], or lack deterministic emergency danger escalation and scope gating [5]."),
-        ("• Sahaaya High-Impact Value [1, 2, 6]:", "100% offline, protocol-grounded companion: deterministic danger-sign escalation, doctor redirects, prioritized visits, emergency referral slips, and 2G SMS field sync.")
+        ("• Frontline Scale & National Need:", "10.29 lakh ASHAs and ~2.5 lakh Sub-Centre ANMs across India serving 1,000 population norms, requiring an intuitive, reliable paramedical companion [1, 2]."),
+        ("• Critical Gap in Existing Systems:", "State tools (ANMOL, mSakhi, Kilkari) suffer from cloud latency, sync failures in zero-signal areas [4], or lack deterministic emergency danger escalation and scope gating [5]."),
+        ("• Sahaaya High-Impact Value:", "100% offline, protocol-grounded companion: deterministic danger-sign escalation [1], doctor redirects [6], prioritized visits, emergency referral slips, and 2G SMS field sync [4].")
     ]
     y = 265
     for title, desc in mkt_bullets:
@@ -113,10 +113,10 @@ def build_pdf():
     p3.apply_redactions()
 
     sol_bullets = [
-        ("• Deterministic Danger Escalation + Referral Slip [1, 2]:", "Scans queries across English, Hinglish & Telugu-Latin; triggers red screen (100% recall on 367 phrasings) + 1-tap 108 Emergency Referral Slip."),
-        ("• Strict Non-Prescribing Scope Gate [1, 6]:", "Hard-blocks antibiotic & dosage questions with physician redirects, ensuring paramedical workers operate strictly within ASHA guidelines."),
-        ("• Extractive BM25 Protocol Retrieval [1, 2]:", "Pure Kotlin BM25 matches questions to official MoHFW/NHM manuals with exact document & page citations (0.53 ms latency, 0% hallucination)."),
-        ("• Prioritised Daily Household Action Plan & 2G Sync [4, 5]:", "Triage ranking: Danger Flags > Overdue Follow-ups > Routine Due Dates + 1-Tap End-of-Day PHC Summary Report (transmissible via 2G SMS).")
+        ("• Deterministic Danger Escalation + Referral Slip:", "Scans queries across English, Hinglish & Telugu-Latin; triggers red screen (100% recall on 367 phrasings [1, 2]) + 1-tap 108 Emergency Referral Slip."),
+        ("• Strict Non-Prescribing Scope Gate:", "Hard-blocks antibiotic & dosage questions with physician redirects, ensuring paramedical workers operate strictly within ASHA guidelines [1, 6]."),
+        ("• Extractive BM25 Protocol Retrieval:", "Pure Kotlin BM25 matches questions to official MoHFW/NHM manuals [1, 2] with exact document & page citations (0.53 ms latency, 0% hallucination)."),
+        ("• Prioritised Daily Household Action Plan & 2G Sync:", "Triage ranking: Danger Flags > Overdue Follow-ups > Routine Due Dates + 1-Tap End-of-Day PHC Summary Report (transmissible via 2G SMS [4, 5]).")
     ]
     y = 118
     for title, desc in sol_bullets:
@@ -137,10 +137,10 @@ def build_pdf():
 
     steps = [
         ("1. Input & Offline Voice Recognition:", " Supports speech and text queries in English, Hindi & Telugu (Latin). Trilingual instant switching and sunlight-readable dark/light modes."),
-        ("2. Layer 1: Deterministic Danger Rule Engine [1, 2]:", " Hard-coded regex & phrase matching across 27 danger signs (100% recall). Immediately generates Red Alert + 108 Emergency Referral Slip."),
-        ("3. Layer 2: Intent Safety Gate [1, 6]:", " Blocks clinical prescription/antibiotic queries with fixed doctor redirect, protecting workers against medical malpractice."),
-        ("4. Layer 3: Pure Kotlin BM25 Retriever [1, 2]:", " Tokenises with code-mixed synonym expansion, scores against grounded MoHFW chunks with confidence thresholding (0% hallucination)."),
-        ("5. Dynamic Visit-List Engine & 2G Sync [4]:", " Ranks 30+ family records by clinical urgency: Danger Flags -> Overdue -> Upcoming. 1-Tap generates daily PHC SMS field summaries.")
+        ("2. Layer 1: Deterministic Danger Rule Engine:", " Hard-coded regex & phrase matching across 27 danger signs (100% recall on MoHFW rules [1, 2]). Immediately generates Red Alert + 108 Emergency Referral Slip."),
+        ("3. Layer 2: Intent Safety Gate:", " Blocks clinical prescription/antibiotic queries with fixed doctor redirect, enforcing non-prescribing boundaries [1, 6] to prevent medical malpractice."),
+        ("4. Layer 3: Pure Kotlin BM25 Retriever:", " Tokenises with code-mixed synonym expansion, scores against grounded MoHFW chunks [1, 2] with confidence thresholding (0% hallucination)."),
+        ("5. Dynamic Visit-List Engine & 2G Sync:", " Ranks 30+ family records by clinical urgency: Danger Flags -> Overdue -> Upcoming. 1-Tap generates daily PHC SMS field summaries [4].")
     ]
     y = 120
     for title, desc in steps:
@@ -236,10 +236,10 @@ def build_pdf():
     p6.apply_redactions()
 
     d1_lines = [
-        "Deterministic Safety-First Layer [1, 6]:",
+        "Deterministic Safety-First Layer:",
         "Hard-coded emergency rule engine",
-        "fires BEFORE any AI logic, achieving",
-        "100% recall (367/367 tested phrasings)",
+        "fires BEFORE any AI logic (per [1, 6]),",
+        "achieving 100% recall (367 phrasings)",
         "with 0% hallucination + 1-tap 108",
         "Emergency Referral Slip generation."
     ]
@@ -249,8 +249,8 @@ def build_pdf():
         y += 13
 
     d2_lines = [
-        "100% Offline & Measured Speed [4]:",
-        "Zero network permissions required.",
+        "100% Offline & Measured Speed:",
+        "Zero network permissions (built for [4]).",
         "Measured on JVM & physical phone:",
         "• Median Latency: 0.53 ms",
         "• P95 Latency: 5.38 ms",
@@ -277,8 +277,8 @@ def build_pdf():
         y += 13
 
     adv_bullets = [
-        ("• Clinically Grounded Trust [1, 2, 6]:", "Unlike generic LLM chatbots that hallucinate dosages, Sahaaya hard-refuses prescriptions, cites official MoHFW/NHM protocols [1, 2], and produces actionable 108 ambulance referral slips."),
-        ("• Workflow Unification [4, 5]:", "Replaces fragmented flipbooks, complex checklists, and multi-app fatigue [5] with a clean two-screen trilingual interface (EN/HI/TE) with offline voice input and 2G SMS field sync [4].")
+        ("• Clinically Grounded Trust:", "Unlike generic LLM chatbots that hallucinate dosages, Sahaaya hard-refuses prescriptions [1, 6], cites official MoHFW/NHM protocols [1, 2], and produces actionable 108 ambulance referral slips."),
+        ("• Workflow Unification:", "Replaces fragmented flipbooks, complex checklists, and multi-app fatigue [5] with a clean two-screen trilingual interface (EN/HI/TE) with offline voice input and 2G SMS field sync [4].")
     ]
     y = 300
     for title, desc in adv_bullets:
