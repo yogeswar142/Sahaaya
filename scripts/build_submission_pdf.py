@@ -47,14 +47,14 @@ def build_pdf():
     p1 = doc[0]
     p1.add_redact_annot(pymupdf.Rect(75, 230, 320, 255), fill=c_slide1_bg)
     p1.add_redact_annot(pymupdf.Rect(400, 230, 640, 255), fill=c_slide1_bg)
-    p1.add_redact_annot(pymupdf.Rect(75, 295, 340, 320), fill=c_slide1_bg)
+    p1.add_redact_annot(pymupdf.Rect(75, 295, 395, 320), fill=c_slide1_bg)
     p1.add_redact_annot(pymupdf.Rect(400, 295, 640, 320), fill=c_slide1_bg)
     p1.apply_redactions()
 
-    p1.insert_text((79.3, 246), "[Enter Team Name - Placeholder]", fontsize=14, color=c_white, fontname="helv")
-    p1.insert_text((403.6, 246), "[Enter Leader Name - Placeholder]", fontsize=14, color=c_white, fontname="helv")
-    p1.insert_text((79.3, 311), "[Track: Problem H5 - ASHA Companion]", fontsize=14, color=c_white, fontname="helv")
-    p1.insert_text((403.6, 311), "[Date: 18/10/2026 - Placeholder]", fontsize=14, color=c_white, fontname="helv")
+    p1.insert_text((79.3, 246), "Vizag Mavericks (TEAM-001245)", fontsize=13, color=c_white, fontname="helv")
+    p1.insert_text((403.6, 246), "Amara Yogeswararao", fontsize=13, color=c_white, fontname="helv")
+    p1.insert_text((79.3, 310), "H5. Frontline Health-Worker Companion for Low-Connectivity Areas", fontsize=9.6, color=c_white, fontname="helv")
+    p1.insert_text((403.6, 310), "18/10/2026", fontsize=13, color=c_white, fontname="helv")
 
     # -------------------------------------------------------------
     # PAGE 2: USE CASE (Problem Statement & Market Opportunity)
