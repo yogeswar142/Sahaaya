@@ -47,6 +47,8 @@ fun VisitsScreen(
     var selectedFilter by remember { mutableStateOf("ALL") }
     var searchQuery by remember { mutableStateOf("") }
     val completedVisits = remember { mutableStateListOf<String>() }
+    var showDailySummary by remember { mutableStateOf(false) }
+    var selectedDangerReferral by remember { mutableStateOf<PrioritizedVisit?>(null) }
 
     val dangerCount = prioritizedVisits.count { it.priorityGroup == PriorityGroup.DANGER }
     val overdueCount = prioritizedVisits.count { it.priorityGroup == PriorityGroup.OVERDUE }
@@ -88,22 +90,51 @@ fun VisitsScreen(
             .then(bgModifier)
             .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
-        // 1. Header with Title & Beneficiary Count
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = Strings.visitsHeader(language),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = if (isDarkTheme) TextPrimaryDark else SecondaryNavy,
-                    fontSize = 20.sp
+        // 1. Header with Title, Beneficiary Count, and 1-Tap Daily Report Button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = Strings.visitsHeader(language),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDarkTheme) TextPrimaryDark else SecondaryNavy,
+                        fontSize = 20.sp
+                    )
                 )
-            )
-            Text(
-                text = Strings.visitsSubheader(filteredList.size, prioritizedVisits.size, language),
-                style = MaterialTheme.typography.bodySmall.copy(
-                    color = if (isDarkTheme) TextSecondaryDark else Color(0xFF64748B)
+                Text(
+                    text = Strings.visitsSubheader(filteredList.size, prioritizedVisits.size, language),
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = if (isDarkTheme) TextSecondaryDark else Color(0xFF64748B)
+                    )
                 )
-            )
+            }
+
+            // 1-Tap End-of-Day PHC Summary Report Button
+            FilledTonalButton(
+                onClick = { showDailySummary = true },
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = if (isDarkTheme) SurfaceElevatedDark else Color(0xFFE0F2F1),
+                    contentColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal
+                )
+            ) {
+                Icon(
+                    Icons.Default.Assignment,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = Strings.endOfDayReportButton(language),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -282,11 +313,40 @@ fun VisitsScreen(
                         },
                         onConsultProtocol = { query ->
                             onNavigateToAsk(query)
+                        },
+                        onOpenReferral = { dangerVisit ->
+                            selectedDangerReferral = dangerVisit
                         }
                     )
                 }
             }
         }
+    }
+
+    // 1-Tap Daily Summary Dialog
+    DailySummaryDialog(
+        isOpen = showDailySummary,
+        onDismiss = { showDailySummary = false },
+        totalHouseholds = members.size,
+        completedVisits = completedVisits.toList(),
+        dangerList = prioritizedVisits.filter { it.priorityGroup == PriorityGroup.DANGER },
+        overdueCount = overdueCount,
+        language = language,
+        isDarkTheme = isDarkTheme
+    )
+
+    // Emergency Referral Slip Dialog for selected danger visit
+    selectedDangerReferral?.let { dangerVisit ->
+        ReferralSlipDialog(
+            isOpen = true,
+            onDismiss = { selectedDangerReferral = null },
+            patientName = "${dangerVisit.member.name} (${dangerVisit.member.familyId})",
+            dangerSign = dangerVisit.member.dangerFlag,
+            category = dangerVisit.member.memberType,
+            citation = "MoHFW Protocol • Induction Module for ASHAs / MCP Card",
+            language = language,
+            isDarkTheme = isDarkTheme
+        )
     }
 }
 
@@ -377,7 +437,8 @@ fun BeneficiaryVisitCard(
     isDone: Boolean,
     isDarkTheme: Boolean,
     onToggleDone: () -> Unit,
-    onConsultProtocol: (String) -> Unit
+    onConsultProtocol: (String) -> Unit,
+    onOpenReferral: (PrioritizedVisit) -> Unit = {}
 ) {
     val member = visit.member
     val isDanger = visit.priorityGroup == PriorityGroup.DANGER
@@ -540,15 +601,31 @@ fun BeneficiaryVisitCard(
                             )
                         }
                         Spacer(modifier = Modifier.width(6.dp))
-                        Button(
-                            onClick = { onConsultProtocol(member.dangerFlag) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isDarkTheme) DangerRedDark else DangerRed
-                            ),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(Strings.btnReferNow(language), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            OutlinedButton(
+                                onClick = { onOpenReferral(visit) },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = if (isDarkTheme) DangerRedDark else DangerRed
+                                ),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (isDarkTheme) DangerRedDark else DangerRed
+                                ),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Slip", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Button(
+                                onClick = { onConsultProtocol(member.dangerFlag) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isDarkTheme) DangerRedDark else DangerRed
+                                ),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(Strings.btnReferNow(language), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }

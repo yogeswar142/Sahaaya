@@ -300,4 +300,98 @@ object Strings {
         AppLanguage.HINDI -> "बेंचमार्क चलाएं (30 प्रश्न)"
         AppLanguage.TELUGU -> "బెంచ్‌మార్క్ పరీక్ష (30 ప్రశ్నలు)"
     }
+
+    // Voice Input Feature
+    fun voicePrompt(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Speak symptom in English, Hindi, or Telugu..."
+        AppLanguage.HINDI -> "लक्षण बोलें (हिन्दी / English)..."
+        AppLanguage.TELUGU -> "లక్షణాలు చెప్పండి..."
+    }
+
+    fun voiceButtonDesc(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Voice Input"
+        AppLanguage.HINDI -> "आवाज से बोलें"
+        AppLanguage.TELUGU -> "వాయిస్ ఇన్‌పుట్"
+    }
+
+    // Emergency Referral Slip Feature
+    fun generateReferralSlip(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "GENERATE REFERRAL SLIP"
+        AppLanguage.HINDI -> "रेफरल पर्ची बनाएं"
+        AppLanguage.TELUGU -> "రిఫెరల్ స్లిప్ రూపొందించండి"
+    }
+
+    fun referralSlipHeader(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "EMERGENCY REFERRAL SLIP"
+        AppLanguage.HINDI -> "आपातकालीन रेफरल पर्ची"
+        AppLanguage.TELUGU -> "అత్యవసర రిఫెరల్ స్లిప్"
+    }
+
+    fun referralSubcentre(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "ASHA Beat: Sub-Centre Health Post"
+        AppLanguage.HINDI -> "आशा क्षेत्र: उप-स्वास्थ्य केंद्र"
+        AppLanguage.TELUGU -> "ఆశా బీట్: ఉప-ఆరోగ్య కేంద్రం"
+    }
+
+    fun patientNameLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Patient / Beneficiary:"
+        AppLanguage.HINDI -> "मरीज / लाभार्थी:"
+        AppLanguage.TELUGU -> "రోగి / లబ్ధిదారు:"
+    }
+
+    fun patientWalkin(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Walk-in Emergency Beneficiary"
+        AppLanguage.HINDI -> "आपातकालीन मरीज"
+        AppLanguage.TELUGU -> "అత్యవసర లబ్ధిదారు"
+    }
+
+    fun shareSlipSms(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Share Slip / SMS to 108"
+        AppLanguage.HINDI -> "SMS या 108 पर भेजें"
+        AppLanguage.TELUGU -> "SMS లేదా 108 కి పంపండి"
+    }
+
+    fun copySlip(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Copy Details"
+        AppLanguage.HINDI -> "कॉपी करें"
+        AppLanguage.TELUGU -> "కాపీ చేయండి"
+    }
+
+    // Daily PHC Summary Report Feature
+    fun endOfDayReportButton(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Daily Report"
+        AppLanguage.HINDI -> "दैनिक रिपोर्ट"
+        AppLanguage.TELUGU -> "నేటి నివేదిక"
+    }
+
+    fun dailySummaryHeader(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Daily Field Summary — PHC Sync"
+        AppLanguage.HINDI -> "दैनिक क्षेत्र सारांश रिपोर्ट"
+        AppLanguage.TELUGU -> "నేటి ఫీల్డ్ సారాంశ నివేదిక"
+    }
+
+    fun visitedTodayLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Completed Visits:"
+        AppLanguage.HINDI -> "पूर्ण भेंट:"
+        AppLanguage.TELUGU -> "పూర్తయిన సందర్శనలు:"
+    }
+
+    fun dangerCasesLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Flagged Danger Cases:"
+        AppLanguage.HINDI -> "गंभीर खतरे के मामले:"
+        AppLanguage.TELUGU -> "గుర్తించిన ప్రమాద కేసులు:"
+    }
+
+    fun overduePendingLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Pending Overdue Follow-ups:"
+        AppLanguage.HINDI -> "लंबित छूटी हुई भेंट:"
+        AppLanguage.TELUGU -> "బాకీ ఉన్న సందర్శనలు:"
+    }
+
+    fun sendToAnm(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Send to ANM / Doctor (SMS)"
+        AppLanguage.HINDI -> "एएनएम / डॉक्टर को SMS भेजें"
+        AppLanguage.TELUGU -> "ANM / డాక్టర్‌కు SMS పంపండి"
+    }
 }
+

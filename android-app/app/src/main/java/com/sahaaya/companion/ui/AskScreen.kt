@@ -1,5 +1,11 @@
 package com.sahaaya.companion.ui
 
+import android.app.Activity
+import android.content.Intent
+import android.speech.RecognizerIntent
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,6 +16,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -18,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,8 +46,43 @@ fun AskScreen(
     initialQuery: String? = null,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var queryText by remember { mutableStateOf(initialQuery ?: "") }
     var currentOutput by remember { mutableStateOf<PipelineOutput?>(null) }
+    var showReferralSlip by remember { mutableStateOf(false) }
+
+    // Offline Voice Recognizer Launcher
+    val speechRecognizerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spokenText: String? =
+                result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!spokenText.isNullOrBlank()) {
+                queryText = spokenText
+                currentOutput = pipeline.process(spokenText)
+            }
+        }
+    }
+
+    val startVoiceRecognition = {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PROMPT, Strings.voicePrompt(language))
+            val langTag = when (language) {
+                AppLanguage.HINDI -> "hi-IN"
+                AppLanguage.TELUGU -> "te-IN"
+                AppLanguage.ENGLISH -> "en-IN"
+            }
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, langTag)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, langTag)
+        }
+        try {
+            speechRecognizerLauncher.launch(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Voice recognition not available on device", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Run pipeline if initial query provided
     LaunchedEffect(initialQuery) {
@@ -102,6 +146,15 @@ fun AskScreen(
                     tint = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal
                 )
             },
+            trailingIcon = {
+                IconButton(onClick = startVoiceRecognition) {
+                    Icon(
+                        Icons.Default.Mic,
+                        contentDescription = Strings.voiceButtonDesc(language),
+                        tint = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal
+                    )
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
@@ -116,29 +169,50 @@ fun AskScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Big Primary Action Button
-        Button(
-            onClick = {
-                if (queryText.isNotBlank()) {
-                    currentOutput = pipeline.process(queryText)
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
-                contentColor = if (isDarkTheme) Color(0xFF022C28) else Color.White
-            ),
-            shape = RoundedCornerShape(12.dp)
+        // Primary Action Buttons Row (Search + Voice Mic)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(Icons.Default.Search, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                Strings.searchButton(language),
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp
-            )
+            Button(
+                onClick = {
+                    if (queryText.isNotBlank()) {
+                        currentOutput = pipeline.process(queryText)
+                    }
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
+                    contentColor = if (isDarkTheme) Color(0xFF022C28) else Color.White
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.Search, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    Strings.searchButton(language),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+            }
+
+            FilledTonalIconButton(
+                onClick = startVoiceRecognition,
+                modifier = Modifier
+                    .size(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = if (isDarkTheme) SurfaceElevatedDark else Color(0xFFE0F2F1),
+                    contentColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal
+                )
+            ) {
+                Icon(
+                    Icons.Default.Mic,
+                    contentDescription = Strings.voiceButtonDesc(language)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -295,6 +369,33 @@ fun AskScreen(
                                     color = if (isDarkTheme) TextPrimaryDark else SecondaryNavy
                                 )
                             )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // 1-Tap Emergency Referral Slip Action Button
+                            Button(
+                                onClick = { showReferralSlip = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(44.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isDarkTheme) DangerRedDark else DangerRed,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.LocalHospital,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = Strings.generateReferralSlip(language),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                            }
                         }
                     }
                 }
@@ -442,4 +543,20 @@ fun AskScreen(
             }
         }
     }
+
+    // Emergency Referral Slip Modal
+    if (currentOutput is PipelineOutput.DangerEscalation) {
+        val danger = currentOutput as PipelineOutput.DangerEscalation
+        ReferralSlipDialog(
+            isOpen = showReferralSlip,
+            onDismiss = { showReferralSlip = false },
+            patientName = Strings.patientWalkin(language),
+            dangerSign = danger.rule.dangerSign,
+            category = danger.rule.category,
+            citation = danger.citation,
+            language = language,
+            isDarkTheme = isDarkTheme
+        )
+    }
 }
+

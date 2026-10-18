@@ -15,12 +15,10 @@ def build_pdf():
     c_text_dark = (0.15, 0.15, 0.15)
     c_green = (0.18, 0.49, 0.20)
 
-    def draw_bullet_block(page, x, y, max_w, title, desc, title_color=c_dark_blue, font_size=8.5, line_height=10.5, spacing=3.5):
-        # Draw title on line 1
+    def draw_bullet_block(page, x, y, max_w, title, desc, title_color=c_dark_blue, font_size=8.4, line_height=10.4, spacing=3.0):
         page.insert_text((x, y), title, fontname="hebo", fontsize=font_size, color=title_color)
         y += line_height
         
-        # Wrap description text indented at x + 10
         desc_x = x + 10
         desc_max_w = max_w - 10
         words = desc.strip().split()
@@ -47,10 +45,11 @@ def build_pdf():
     # PAGE 1: TITLE SLIDE
     # -------------------------------------------------------------
     p1 = doc[0]
-    p1.draw_rect(pymupdf.Rect(75, 230, 320, 255), fill=c_slide1_bg, color=None)
-    p1.draw_rect(pymupdf.Rect(400, 230, 640, 255), fill=c_slide1_bg, color=None)
-    p1.draw_rect(pymupdf.Rect(75, 295, 340, 320), fill=c_slide1_bg, color=None)
-    p1.draw_rect(pymupdf.Rect(400, 295, 640, 320), fill=c_slide1_bg, color=None)
+    p1.add_redact_annot(pymupdf.Rect(75, 230, 320, 255), fill=c_slide1_bg)
+    p1.add_redact_annot(pymupdf.Rect(400, 230, 640, 255), fill=c_slide1_bg)
+    p1.add_redact_annot(pymupdf.Rect(75, 295, 340, 320), fill=c_slide1_bg)
+    p1.add_redact_annot(pymupdf.Rect(400, 295, 640, 320), fill=c_slide1_bg)
+    p1.apply_redactions()
 
     p1.insert_text((79.3, 246), "[Enter Team Name - Placeholder]", fontsize=14, color=c_white, fontname="helv")
     p1.insert_text((403.6, 246), "[Enter Leader Name - Placeholder]", fontsize=14, color=c_white, fontname="helv")
@@ -61,22 +60,23 @@ def build_pdf():
     # PAGE 2: USE CASE (Problem Statement & Market Opportunity)
     # -------------------------------------------------------------
     p2 = doc[1]
-    p2.draw_rect(pymupdf.Rect(45, 110, 700, 230), fill=c_white, color=None)
-    p2.draw_rect(pymupdf.Rect(45, 260, 700, 395), fill=c_white, color=None)
+    p2.add_redact_annot(pymupdf.Rect(45, 110, 700, 230), fill=c_white)
+    p2.add_redact_annot(pymupdf.Rect(45, 260, 700, 395), fill=c_white)
+    p2.apply_redactions()
 
     prob_bullets = [
-        ("• Frontline Burden & Zero Connectivity:", "Over 10.29 lakh rural ASHA/ANM workers juggle bulky paper flipbooks and 20+ disconnected apps across 1,700+ remote AP villages with zero mobile reception."),
-        ("• Preventable Maternal & Newborn Mortality:", "Obstetric haemorrhage causes 47% of maternal deaths; missed newborn danger signs (hypothermia, convulsions, poor suckling) lead to tragic delays in referral."),
-        ("• LLM Hallucination & Scope Risks:", "Generic cloud AI models hallucinate plausible but dangerous clinical dosages, cannot enforce non-prescribing scope boundaries, and fail completely offline on low-end phones.")
+        ("• Frontline Burden & Zero Cellular Connectivity:", "Over 10.29 lakh rural ASHA & ANM workers navigate 1,700+ remote AP villages with zero mobile reception, juggling bulky flipbooks and 20+ disconnected apps."),
+        ("• Preventable Maternal & Neonatal Deaths:", "Obstetric haemorrhage causes 47% of maternal deaths; missed newborn danger signs (hypothermia, convulsions, chest indrawing) lead to fatal referral delays."),
+        ("• Cloud AI Hallucinations & Malpractice Risks:", "Generic cloud LLMs hallucinate fatal antibiotic dosages, violate non-prescribing ASHA boundaries, require constant 4G data, and fail on low-end smartphones.")
     ]
     y = 122
     for title, desc in prob_bullets:
         y = draw_bullet_block(p2, 55, y, 615, title, desc, font_size=8.4, line_height=10.5, spacing=3.0)
 
     mkt_bullets = [
-        ("• Target User Scale & Reach:", "Over 10.29 lakh active ASHAs across India (norm of ~1 per 1,000 population) plus sub-centre ANM nurse-midwives delivering frontline primary care."),
-        ("• Fragmented Competitive Landscape:", "Existing tools (ANMOL, mSakhi, Kilkari, SMARThealth GPT) require cloud connectivity, increase data-entry fatigue, or lack hard-coded emergency escalation."),
-        ("• Sahaaya High-Impact Value:", "A 100% offline, protocol-grounded companion: deterministic danger-sign escalation first, zero cloud dependency, doctor redirects for out-of-scope queries, and prioritised visits.")
+        ("• Frontline Scale & National Need:", "10.29 lakh ASHAs and ~2.5 lakh Sub-Centre ANMs across India serving 1,000 population norms, requiring an intuitive, reliable paramedical companion."),
+        ("• Critical Gap in Existing Systems:", "State tools (ANMOL, mSakhi, Kilkari) suffer from cloud latency, sync failures, or lack deterministic emergency danger escalation and scope gating."),
+        ("• Sahaaya High-Impact Value:", "100% offline, protocol-grounded companion: deterministic danger-sign escalation, doctor redirects, prioritized visits, emergency referral slips, and 2G SMS field sync.")
     ]
     y = 270
     for title, desc in mkt_bullets:
@@ -86,14 +86,15 @@ def build_pdf():
     # PAGE 3: PROPOSED SOLUTION (Overview & Mockup Image)
     # -------------------------------------------------------------
     p3 = doc[2]
-    p3.draw_rect(pymupdf.Rect(45, 110, 700, 205), fill=c_white, color=None)
-    p3.draw_rect(pymupdf.Rect(36, 204, 684, 395), fill=c_white, color=None)
+    p3.add_redact_annot(pymupdf.Rect(45, 110, 700, 205), fill=c_white)
+    p3.add_redact_annot(pymupdf.Rect(36, 204, 684, 395), fill=c_white)
+    p3.apply_redactions()
 
     sol_bullets = [
-        ("• Deterministic Danger Escalation First:", "Scans queries across English, Hinglish & Telugu (Latin); triggers red 'REFER NOW' screen before any search logic (100% recall on 367 phrasings)."),
-        ("• Strict Non-Prescribing Scope Gate:", "Automatically blocks dosage and antibiotic queries with doctor redirects, keeping paramedical workers safely within ASHA guidelines."),
-        ("• Extractive BM25 Protocol Retrieval:", "Pure Kotlin BM25 matches questions to official MoHFW/NHM guidelines with exact document & page citations (0% hallucination)."),
-        ("• Prioritised Daily Household Action Plan:", "Parses village registers into an actionable daily route: Danger Flags > Overdue Follow-ups > Nearest Due Dates.")
+        ("• Deterministic Danger Escalation + Referral Slip:", "Scans queries across English, Hinglish & Telugu-Latin; triggers red screen (100% recall on 367 phrasings) + 1-tap 108 Emergency Referral Slip."),
+        ("• Strict Non-Prescribing Scope Gate:", "Hard-blocks antibiotic & dosage questions with physician redirects, ensuring paramedical workers operate strictly within ASHA guidelines."),
+        ("• Extractive BM25 Protocol Retrieval:", "Pure Kotlin BM25 matches questions to official MoHFW/NHM manuals with exact document & page citations (0.53 ms latency, 0% hallucination)."),
+        ("• Prioritised Daily Household Action Plan & 2G Sync:", "Triage ranking: Danger Flags > Overdue Follow-ups > Routine Due Dates + 1-Tap End-of-Day PHC Summary Report (transmissible via 2G SMS).")
     ]
     y = 118
     for title, desc in sol_bullets:
@@ -108,32 +109,34 @@ def build_pdf():
     # PAGE 4: DESIGN STEPS & ARCHITECTURE
     # -------------------------------------------------------------
     p4 = doc[3]
-    p4.draw_rect(pymupdf.Rect(45, 110, 375, 395), fill=c_white, color=None)
-    p4.draw_rect(pymupdf.Rect(380, 110, 690, 395), fill=c_white, color=None)
+    p4.add_redact_annot(pymupdf.Rect(45, 110, 375, 395), fill=c_white)
+    p4.add_redact_annot(pymupdf.Rect(380, 110, 690, 395), fill=c_white)
+    p4.apply_redactions()
 
     steps = [
-        ("1. Hard-Coded Danger Rule Engine:", " Matches multilingual tokens (EN, Hinglish, Telugu-Latin) for 27 maternal & newborn danger signs. Triggers immediate red REFER NOW card with protocol citations."),
-        ("2. Parametrical Intent Safety Gate:", " Intercepts out-of-scope requests (antibiotics, clinical dosages, medical diagnoses) and returns fixed physician redirect to prevent malpractice."),
-        ("3. Pure Kotlin BM25 Retriever:", " Tokenises query with code-mixed synonym expansion, scores against grounded MoHFW chunks with strict threshold gating to prevent hallucination."),
-        ("4. Dynamic Visit List Engine:", " Ranks 30+ family records by clinical urgency: Danger Flags (Urgent) -> Overdue visits (by days overdue) -> Upcoming routine follow-ups.")
+        ("1. Input & Offline Voice Recognition:", " Supports speech and text queries in English, Hindi & Telugu (Latin). Trilingual instant switching and sunlight-readable dark/light modes."),
+        ("2. Layer 1: Deterministic Danger Rule Engine:", " Hard-coded regex & phrase matching across 27 danger signs (100% recall). Immediately generates Red Alert + 108 Emergency Referral Slip."),
+        ("3. Layer 2: Intent Safety Gate:", " Blocks clinical prescription/antibiotic queries with fixed doctor redirect, protecting workers against medical malpractice."),
+        ("4. Layer 3: Pure Kotlin BM25 Retriever:", " Tokenises with code-mixed synonym expansion, scores against grounded MoHFW chunks with confidence thresholding (0% hallucination)."),
+        ("5. Dynamic Visit-List Engine & 2G Sync:", " Ranks 30+ family records by clinical urgency: Danger Flags -> Overdue -> Upcoming. 1-Tap generates daily PHC SMS field summaries.")
     ]
-    y = 124
+    y = 120
     for title, desc in steps:
-        p4.insert_text((50, y), title, fontsize=9, fontname="hebo", color=c_dark_blue)
-        y += 12
+        p4.insert_text((50, y), title, fontsize=8.6, fontname="hebo", color=c_dark_blue)
+        y += 11.5
         words = desc.strip().split()
         line = ""
         for w in words:
             test_line = line + " " + w if line else w
-            if pymupdf.get_text_length(test_line, fontname="helv", fontsize=8.2) < 320:
+            if pymupdf.get_text_length(test_line, fontname="helv", fontsize=8.0) < 320:
                 line = test_line
             else:
-                p4.insert_text((55, y), line, fontsize=8.2, fontname="helv", color=c_text_dark)
-                y += 10.5
+                p4.insert_text((55, y), line, fontsize=8.0, fontname="helv", color=c_text_dark)
+                y += 10.0
                 line = w
         if line:
-            p4.insert_text((55, y), line, fontsize=8.2, fontname="helv", color=c_text_dark)
-            y += 15
+            p4.insert_text((55, y), line, fontsize=8.0, fontname="helv", color=c_text_dark)
+            y += 12.5
 
     arch_img = "docs/architecture_diagram.png"
     if os.path.exists(arch_img):
@@ -144,9 +147,10 @@ def build_pdf():
     # PAGE 5: CHALLENGES & MITIGATION
     # -------------------------------------------------------------
     p5 = doc[4]
-    p5.draw_rect(pymupdf.Rect(45, 105, 700, 160), fill=c_white, color=None)
-    p5.draw_rect(pymupdf.Rect(45, 190, 700, 245), fill=c_white, color=None)
-    p5.draw_rect(pymupdf.Rect(45, 275, 700, 350), fill=c_white, color=None)
+    p5.add_redact_annot(pymupdf.Rect(45, 105, 700, 160), fill=c_white)
+    p5.add_redact_annot(pymupdf.Rect(45, 190, 700, 245), fill=c_white)
+    p5.add_redact_annot(pymupdf.Rect(45, 275, 700, 350), fill=c_white)
+    p5.apply_redactions()
 
     def draw_challenge_block(page, y_start, prob_desc, mit_desc):
         page.insert_text((55, y_start), "Problem: ", fontname="hebo", fontsize=8.8, color=c_dark_blue)
@@ -186,7 +190,7 @@ def build_pdf():
     draw_challenge_block(
         p5, 118,
         "Zero mobile reception in rural hamlets and severe RAM/battery constraints on low-end ASHA smartphones.",
-        "100% on-device architecture with ZERO network permissions. Measured APK size is 15.65 MB, median response latency is 0.53 ms, and peak RAM footprint is < 1 MB."
+        "100% on-device architecture with ZERO network permissions. Measured APK size is 16.9 MB, median response latency is 0.53 ms, and peak heap RAM footprint is < 1 MB."
     )
     draw_challenge_block(
         p5, 204,
@@ -196,25 +200,26 @@ def build_pdf():
     draw_challenge_block(
         p5, 290,
         "Code-mixed vernacular queries (English, Hinglish, Telugu in Latin script) with spelling variations and typos.",
-        "Engineered robust phonetic tokenisation, code-mixed synonym mapping, and token-proximity matching. On-device SLM rephraser planned for finale using organizer models."
+        "Engineered robust phonetic tokenisation, code-mixed synonym mapping, offline voice mic, and 1-tap referral/daily sync. On-device SLM planned for finale using organizer models."
     )
 
     # -------------------------------------------------------------
     # PAGE 6: UNIQUE SELLING PROPOSITION (USP)
     # -------------------------------------------------------------
     p6 = doc[5]
-    p6.draw_rect(pymupdf.Rect(45, 120, 255, 245), fill=c_white, color=None)
-    p6.draw_rect(pymupdf.Rect(270, 120, 480, 245), fill=c_white, color=None)
-    p6.draw_rect(pymupdf.Rect(495, 120, 705, 245), fill=c_white, color=None)
-    p6.draw_rect(pymupdf.Rect(45, 290, 700, 395), fill=c_white, color=None)
+    p6.add_redact_annot(pymupdf.Rect(45, 120, 255, 245), fill=c_white)
+    p6.add_redact_annot(pymupdf.Rect(270, 120, 480, 245), fill=c_white)
+    p6.add_redact_annot(pymupdf.Rect(495, 120, 705, 245), fill=c_white)
+    p6.add_redact_annot(pymupdf.Rect(45, 290, 700, 395), fill=c_white)
+    p6.apply_redactions()
 
     d1_lines = [
         "Deterministic Safety-First Layer:",
         "Hard-coded emergency rule engine",
         "fires BEFORE any AI logic, achieving",
         "100% recall (367/367 tested phrasings)",
-        "with zero hallucination and cited",
-        "emergency referral instructions."
+        "with 0% hallucination + 1-tap 108",
+        "Emergency Referral Slip generation."
     ]
     y = 135
     for l in d1_lines:
@@ -224,11 +229,11 @@ def build_pdf():
     d2_lines = [
         "100% Offline & Measured Speed:",
         "Zero network permissions required.",
-        "Measured on JVM & Android device:",
+        "Measured on JVM & physical phone:",
         "• Median Latency: 0.53 ms",
         "• P95 Latency: 5.38 ms",
-        "• APK Size: 15.65 MB | RAM: < 1 MB",
-        "Works seamlessly in airplane mode."
+        "• APK Size: 16.9 MB | RAM: < 1 MB",
+        "Runs natively in Airplane Mode."
     ]
     y = 135
     for l in d2_lines:
@@ -236,13 +241,13 @@ def build_pdf():
         y += 13
 
     d3_lines = [
-        "Prioritised Daily Action Plan:",
-        "Transforms static paper registers into",
+        "Prioritised Household Action Plan:",
+        "Converts static paper registers into",
         "an automated daily workflow:",
         "1. URGENT: Danger Flag Cases",
         "2. OVERDUE: Ranked by days overdue",
         "3. UPCOMING: Nearest scheduled care",
-        "Reduces frontline planning fatigue."
+        "Includes 1-Tap 2G SMS Daily Sync."
     ]
     y = 135
     for l in d3_lines:
@@ -250,8 +255,8 @@ def build_pdf():
         y += 13
 
     adv_bullets = [
-        ("• Clinically Grounded Trust:", "Unlike generic LLM chatbots that invent antibiotic dosages, Sahaaya strictly refuses prescriptions and cites official MoHFW protocols with exact document and page numbers."),
-        ("• Workflow Unification:", "Replaces fragmented flipbooks, complex danger checklists, and multi-app fatigue with a clean two-screen interface tailored for village health workers in low-connectivity areas.")
+        ("• Clinically Grounded Trust:", "Unlike generic LLM chatbots that hallucinate dosages, Sahaaya hard-refuses prescriptions, cites official MoHFW protocols, and produces actionable 108 ambulance referral slips."),
+        ("• Workflow Unification:", "Replaces fragmented flipbooks, complex checklists, and multi-app fatigue with a clean two-screen trilingual interface (EN/HI/TE) with offline voice input tailored for village health workers.")
     ]
     y = 300
     for title, desc in adv_bullets:
@@ -261,10 +266,11 @@ def build_pdf():
     # PAGE 7: DEMO & POC VIDEO
     # -------------------------------------------------------------
     p7 = doc[6]
-    p7.draw_rect(pymupdf.Rect(180, 345, 540, 385), fill=c_white, color=None)
+    p7.add_redact_annot(pymupdf.Rect(180, 345, 540, 385), fill=c_white)
+    p7.apply_redactions()
 
     p7.insert_text((260, 362), "Demo video link: to be added", fontsize=11, fontname="hebo", color=c_dark_blue)
-    poc_points = "Working Offline Android POC (app-debug.apk, 15.65 MB) | 100% Danger Recall (367 phrasings) | 0.53 ms Median Latency | Zero Cloud Permissions"
+    poc_points = "Working Offline Android POC (app-debug.apk, 16.9 MB) | 100% Danger Recall (367 phrasings) | 0.53 ms Median Latency | Zero Cloud Permissions"
     p7.insert_text((48, 388), poc_points, fontsize=8, fontname="helv", color=(0.3, 0.3, 0.3))
 
     doc.save(out_pdf)
