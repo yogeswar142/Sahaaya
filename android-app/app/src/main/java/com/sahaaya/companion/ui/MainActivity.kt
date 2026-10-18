@@ -11,9 +11,15 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.sahaaya.companion.R
 import com.sahaaya.companion.core.*
 import java.io.File
 
@@ -61,17 +67,28 @@ class MainActivity : ComponentActivity() {
             topBar = {
                 TopAppBar(
                     title = {
-                        Column {
-                            Text(
-                                "Sahaaya Sahayak",
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_sahaaya_logo),
+                                contentDescription = "Sahaaya Logo",
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(8.dp))
                             )
-                            Text(
-                                "Offline ASHA & ANM Clinical Companion",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.85f)
-                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    "Sahaaya",
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    "Frontline Clinical Companion",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.85f)
+                                )
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryTeal),

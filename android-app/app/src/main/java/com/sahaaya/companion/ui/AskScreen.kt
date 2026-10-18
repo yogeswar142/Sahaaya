@@ -19,6 +19,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.sahaaya.companion.R
 import com.sahaaya.companion.core.PipelineOutput
 import com.sahaaya.companion.core.SahaayaPipeline
 
@@ -141,6 +144,47 @@ fun AskScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        // Initial welcome state
+        if (currentOutput == null) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_sahaaya_logo),
+                        contentDescription = "Sahaaya Logo",
+                        modifier = Modifier
+                            .size(76.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        "Sahaaya Clinical Companion",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SecondaryNavy
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "Ask clinical queries in English, Hinglish, or Telugu (Latin).\nStrict protocol citations • Hardcoded danger escalations • Zero hallucination",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+        }
 
         // Output Display Area
         currentOutput?.let { output ->
