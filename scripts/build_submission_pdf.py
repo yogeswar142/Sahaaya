@@ -2,8 +2,8 @@ import pymupdf
 import os
 
 def build_pdf():
-    src_pdf = "Round1_Template submission.pdf"
-    out_pdf = "Round1_Submission_Filled.pdf"
+    src_pdf = "scripts/template.pdf" if os.path.exists("scripts/template.pdf") else "Round1_Template submission.pdf"
+    out_pdf = "TEAM-001245_Sahaaya_Round1_Submission.pdf"
     
     doc = pymupdf.open(src_pdf)
     print(f"Loaded {src_pdf} with {len(doc)} pages.")

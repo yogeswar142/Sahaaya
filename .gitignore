@@ -10,6 +10,7 @@ build/
 downloaded_protocols/
 tmp_slides/
 test-runner.jar
+scripts/template.pdf
 
 # OS and IDE files
 .idea/
