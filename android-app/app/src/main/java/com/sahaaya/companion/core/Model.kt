@@ -71,6 +71,11 @@ sealed class PipelineOutput {
     data class OutOfCorpus(
         val message: String = "Not in my protocols, ask your ANM/doctor."
     ) : PipelineOutput()
+
+    data class ConversationalGuidance(
+        val greeting: String = "Namaste! I am Sahaaya, your frontline clinical companion.",
+        val promptMessage: String = "Please enter a specific clinical symptom, patient sign, or health question to look up official MoHFW protocols."
+    ) : PipelineOutput()
 }
 
 data class RegisterMember(

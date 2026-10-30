@@ -113,8 +113,41 @@ def normalize_query(text: str) -> str:
     return t
 
 
+CONVERSATIONAL_STOPWORDS = {
+    "hi", "hello", "hey", "hlo", "namaste", "namaskar", "namaskaram",
+    "vanakkam", "pranam", "pranaam", "sahaaya", "sahaya", "hii", "hiii", "helo"
+}
+
+
+def is_conversational_greeting(query: str) -> bool:
+    trimmed = re.sub(r"[^a-z0-9\s]", "", query.strip().lower())
+    words = trimmed.split()
+    if not words:
+        return True
+
+    exact_phrases = {
+        "hi", "hello", "hey", "hlo", "namaste", "namaskar", "namaskaram",
+        "vanakkam", "pranam", "pranaam", "good morning", "good afternoon",
+        "good evening", "shubh prabhat", "shubh sandhya", "kaise ho",
+        "how are you", "sahaaya", "sahaya", "kya haal hai", "help",
+        "madad", "sahayata", "test", "testing", "ok", "theek hai",
+        "thank you", "thanks", "dhanyawad", "dhanyavadalu", "shukriya",
+        "bye", "alvida", "good night", "hie", "helo", "hy", "hii", "hiii"
+    }
+    if trimmed in exact_phrases:
+        return True
+
+    if len(words) == 1 and words[0] in CONVERSATIONAL_STOPWORDS:
+        return True
+
+    if len(trimmed) < 3 and not trimmed.isdigit():
+        return True
+
+    return False
+
+
 def expand_tokens(norm_text: str) -> list[str]:
-    raw_tokens = norm_text.split()
+    raw_tokens = [tok for tok in norm_text.split() if tok not in CONVERSATIONAL_STOPWORDS]
     tokens = []
     for tok in raw_tokens:
         tokens.append(tok)
@@ -146,11 +179,12 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
 
     # 1. OBSTETRIC / PREGNANCY & POSTPARTUM EMERGENCIES (ESC-2 & ESC-3)
     # -----------------------------------------------------------------
-    # Bleeding in pregnancy or delivery (ESC-2.1)
-    if ("khoon" in norm or "bleed" in norm or "rakt" in norm) and (
-        "pregnant" in norm or "garbh" in norm or "delivery" in norm or "prasav" in norm or "mahin" in norm or "pet" in norm
+    # Bleeding in pregnancy, delivery or postpartum (ESC-2.1 & ESC-3.1)
+    if ("khoon" in norm or "bleed" in norm or "rakt" in norm or "raktha sravam" in norm) and (
+        "pregnant" in norm or "garbh" in norm or "deliver" in norm or "prasav" in norm or "postpartum" in norm or "mahin" in norm or "pet" in norm or "anc" in norm
     ):
-        return True, "ESC-2.1", "Bleeding in pregnancy/delivery"
+        is_pph = "deliver" in norm or "prasav" in norm or "postpartum" in norm or "pad" in norm
+        return True, "ESC-3.1" if is_pph else "ESC-2.1", "Bleeding in pregnancy / postpartum (PPH)"
 
     # Postpartum heavy bleeding / PPH (ESC-3.1): pad soaked < 5 min, > 5 pads/day
     if "pad" in norm and ("bhar" in norm or "soak" in norm or "bheeg" in norm or "minute" in norm or "din me" in norm or "3-4" in norm or "4" in norm or "5" in norm):
@@ -216,6 +250,12 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
     has_indrawing_neg = ("no chest indrawing" in norm or "no indrawing" in norm or "pasli nahi" in norm or "without indrawing" in norm)
     if ("pasli" in norm or "indrawing" in norm or "dhans" in norm) and not has_indrawing_neg:
         return True, "ESC-4.2" if ("navjaat" in norm or "newborn" in norm or "din ka" in norm) else "ESC-5.2", "Chest indrawing"
+    # Fast breathing (tachypnea >= 60 breaths/min, ESC-4.2)
+    br_match = re.search(r'(?:saans|breath(?:ing)?|respirat(?:ion|ory))\s*(?:rate)?\s*(?:is)?\s*[:=]?\s*(\d{2,3})', norm) or re.search(r'(\d{2,3})\s*(?:breaths?|saans|/min|per minute)', norm)
+    if br_match:
+        rate = int(br_match.group(1))
+        if 40 <= rate <= 120 and rate >= 60:
+            return True, "ESC-4.2", f"Neonatal / infant fast breathing ({rate} >= 60/min)"
     if ("saans" in norm and ("66" in norm or "60" in norm or "68" in norm or "70" in norm)):
         return True, "ESC-4.2", "Neonatal tachypnea (breathing >= 60/min)"
 
@@ -227,10 +267,16 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
     ):
         return True, "ESC-4.1" if ("navjaat" in norm or "din ka" in norm) else "ESC-5.1", "Inability to drink or breastfeed / limp limbs"
 
-    # Very low birth weight < 1.8 kg (ESC-4.4)
-    # Context-aware: only < 1.8 kg escalates to SNCU. 1.8 kg or 1.9 kg is LBW but routine HBNC.
+    # Very low birth weight < 1.8 kg or < 1800 grams (ESC-4.4)
+    # Context-aware: only < 1.8 kg / < 1800g escalates to SNCU. 1.8 kg or 1.9 kg is LBW but routine HBNC.
+    wt_g = re.search(r"(\d{3,4})\s*(?:g|gm|gram|grams)\b", norm)
+    if wt_g and any(x in norm for x in ["birth", "baby", "bachch", "born", "paida", "weight", "wajan", "baruvu"]):
+        g = float(wt_g.group(1))
+        if g < 1800:
+            return True, "ESC-4.4", f"Very low birth weight ({g}g < 1800g -> SNCU)"
+
     lbw_match = re.search(r"(\d+(?:\.\d+)?)\s*kg", norm)
-    if lbw_match and ("bachcha" in norm or "baby" in norm or "paida" in norm or "wajan" in norm or "weight" in norm):
+    if lbw_match and ("bachcha" in norm or "baby" in norm or "paida" in norm or "wajan" in norm or "weight" in norm or "baruvu" in norm):
         wt = float(lbw_match.group(1))
         if wt < 1.8:
             return True, "ESC-4.4", f"Very low birth weight ({wt} kg < 1.8 kg -> SNCU)"
@@ -266,14 +312,18 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
     if "behosh" in norm or "unconscious" in norm:
         return True, "ESC-6.3" if "sugar" in norm or "insulin" in norm else "ESC-5.1", "Loss of consciousness"
 
-    # Prolonged daily fever > 7 days (ESC-5.4)
-    fever_dur = re.search(r"(\d+)\s*din\s*(?:se)?\s*(?:roz)?\s*bukhar", norm) or re.search(r"bukhar\s*(\d+)\s*din", norm)
+    # Prolonged daily fever >= 7 days (ESC-5.4)
+    fever_dur = (
+        re.search(r"(\d+)\s*(?:din|days|day)\s*(?:se)?\s*(?:roz)?\s*(?:bukhar|fever|jwar)", norm) or
+        re.search(r"(?:bukhar|fever)\s*(?:for|se)?\s*(\d+)\s*(?:din|days)", norm) or
+        re.search(r"(?:fever|bukhar).*?(\d+)\s*(?:din|days)", norm)
+    )
     if fever_dur:
         days = int(fever_dur.group(1))
         if days >= 7:
-            return True, "ESC-5.4", f"Prolonged fever for {days} days (> 7 days)"
+            return True, "ESC-5.4", f"Prolonged fever for {days} days (>= 7 days)"
     if "9 din se" in norm and "bukhar" in norm:
-        return True, "ESC-5.4", "Fever for 9 days (> 7 days)"
+        return True, "ESC-5.4", "Fever for 9 days (>= 7 days)"
 
     # Fever with stiff neck (ESC-5.4)
     if "bukhar" in norm and ("gardan akad" in norm or "stiff neck" in norm):
@@ -324,7 +374,7 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
     ):
         return True, "ESC-6.2", "Suspected stroke (BE FAST)"
 
-    # Hypertensive crisis BP >= 180/110 (ESC-6.4) or Pregnancy BP >= 140/90 (ESC-2.3)
+    # Hypertensive crisis BP >= 180/110 (ESC-6.4) or Pregnancy/ANC BP >= 140/90 (ESC-2.3)
     # Check both raw text and normalized string for slash or space
     bp_match = re.search(r"(\d{2,3})\s*(?:/|\s+)\s*(\d{2,3})", text) or re.search(r"(\d{2,3})\s*(?:/|\s+)\s*(\d{2,3})", norm)
     if bp_match:
@@ -333,15 +383,16 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
         if 70 <= sys_bp <= 260 and 40 <= dia_bp <= 160:
             if sys_bp >= 180 or dia_bp >= 110:
                 return True, "ESC-6.4", f"Hypertensive crisis (BP {sys_bp}/{dia_bp} >= 180/110)"
-            if ("pregnant" in norm or "garbh" in norm or "mahila" in norm or "delivery" in norm or "mahin" in norm) and (sys_bp >= 140 or dia_bp >= 90):
+            is_maternal = any(x in norm for x in ["pregnant", "garbh", "mahila", "delivery", "deliver", "anc", "mother", "maa", "talli", "7 mahin", "8 mahin", "9 mahin", "months"])
+            if is_maternal and (sys_bp >= 140 or dia_bp >= 90):
                 return True, "ESC-2.3", f"Hypertension in pregnancy (BP {sys_bp}/{dia_bp} >= 140/90)"
 
-    # Snakebite, poisoning, severe burns (ESC-1.4)
-    if "saanp" in norm or "snake" in norm:
+    # Snakebite, poisoning, severe burns in Hindi, English & Telugu (ESC-1.4)
+    if any(x in norm for x in ["saanp", "snake", "pamu", "paamu"]):
         return True, "ESC-1.4", "Snakebite emergency"
-    if "zahar" in norm or "poison" in norm or "kerosene" in norm or "mitti ka tel" in norm:
+    if any(x in norm for x in ["zahar", "poison", "kerosene", "mitti ka tel", "visham"]) or (("mandhu" in norm or "mandu" in norm) and any(x in norm for x in ["taag", "drink"])):
         return True, "ESC-1.4", "Poisoning / chemical ingestion"
-    if "jal gaya" in norm or "severe burn" in norm:
+    if any(x in norm for x in ["jal gaya", "severe burn", "kaalina"]):
         return True, "ESC-1.4", "Severe burn emergency"
 
     return False, None, None
@@ -370,18 +421,44 @@ def evaluate_refusal(text: str) -> tuple[bool, str]:
     if re.search(r"\b(salary|incentive|manthan|login|otp|u-?win|uwin|anmol|techo|poshan|app me|ration|rashan|ayushman|praman|certificate)\b", norm):
         return True, "Administrative and app support queries are outside protocol scope. Please contact your Block Program Manager (SCP-1.2)."
 
-    # 3. Uncovered adult conditions & lab diagnostics
-    if re.search(r"\b(hiv|aids|covid|corona|sars|dengue|typhoid|widal|malaria report|cancer|tumor|thyroid|tsh|tuberculosis|tb|fracture|broken bone|haddi toot|dog bite|kutta kata|rabies|cataract|motiyabind|inhaler|nebulizer|ultrasound|usg|x-?ray|ct scan|mri|bistar geela|bedwetting|enuresis)\b", norm):
-        return True, "Diagnosis and management of non-protocol conditions or lab tests is outside ASHA protocol scope. Please refer the patient to the Medical Officer at the PHC (SCP-1.2)."
+    # 3. Uncovered adult conditions, adult jaundice, animal bites & family planning (SCP-1.2)
+    uncovered = r"\b(hiv|aids|covid|corona|sars|dengue|typhoid|widal|malaria report|cancer|tumor|thyroid|tsh|tuberculosis|tb|fracture|broken bone|haddi toot|dog bite|kutta kata|kukka karich|bandar|rabies|cataract|motiyabind|inhaler|nebulizer|ultrasound|usg|x-?ray|ct scan|mri|bistar geela|bedwetting|enuresis|jaundice|peeliya|copper[\s\-]*t|mala[\s\-]*d|condom|garbhnirodhak|abortion|garbhpaat|infertility)\b"
+    m_unc = re.search(uncovered, norm)
+    if m_unc:
+        matched = m_unc.group(0)
+        is_newborn_jaundice = ("jaundice" in matched or "peeliya" in matched) and any(x in norm for x in ["navjaat", "newborn", "baby", "bachch", "din ka", "shishu"])
+        if not is_newborn_jaundice:
+            return True, f"Diagnosis and management of {matched} is outside ASHA protocol scope. Please refer the patient to the Medical Officer at the PHC (SCP-1.2)."
 
     # 4. Prescription medications & pharmaceutical dosage / usage requests (non-kit)
     # Catches Dolo, Dolo 650, Paracetamol, Antibiotics, Injections, IV Drips, usage requests
-    rx_pattern = r"\b(dolo|dolo\s*650|crocin|calpol|paracetamol|pcm|paracip|combiflam|ibuprofen|meftal|meftal-?spas|amoxicillin|augmentin|cefixime|antibiotic|azithromycin|azithral|cipro|ciprofloxacin|ofloxacin|norfloxacin|metrogyl|glycomet|metformin|amlodipine|telmisartan|insulin|cough syrup|syrup|tablet|capsule|dosage|dose kitna|kitna dena|kitni goli|kitna ml|usage|use kaise|how to use|prescribe|prescription|drops calculation|eye drops?|ear drops?|drops?|boond|drip|saline|injection)\b"
+    rx_pattern = (
+        r"\b("
+        r"dol+o(?:\s*650)?|650\b|crocin?|calpol|paracetam?ol|pcm|paracip|combiflam|ibuprofen|meftal(?:-?spas)?|"
+        r"amox(?:icillin)?|augmentin|cefixime|antibiotic|azithr(?:omycin|al)?|cipro(?:floxacin)?|ofloxacin|norfloxacin|"
+        r"metrogyl|glycomet|metformin|amlodipine|telmisartan|insulin|ondem|vomistop|pantop|ranitidine|cetirizine|"
+        r"cough\s*syrup|syrup|capsule|dosage|dose(?:\s+kitna)?|kitna\s+dena|kitni\s+goli|kitna\s+ml|how\s+to\s+use|"
+        r"dawa(?:i)?|medicine|tablets?|goli|drops?|boond|drip|saline|bottle\s*chadh\w*|injection|sui"
+        r")\b"
+    )
     if not is_kit_or_vaccine:
         match = re.search(rx_pattern, norm)
         if match:
             matched_drug = match.group(0)
             return True, f"Medicine dosing and usage ({matched_drug}) is outside frontline protocol scope. Frontline workers cannot prescribe pharmaceuticals. Please refer to a qualified Medical Officer (SCP-1.2)."
+
+        # Semantic Dosing Guardrail: [Action: give/feed/pilana] + [Amount/Bottle: ml/mg/drops/bottle/spoon]
+        dosing_semantic = (
+            r"(\d+\s*(?:ml|mg|drops?|boond|goli|tablet|spoon|chamach)|bottle).*?\b(pila(?:na|yein|o)?|de(?:na|dein|do)?|khila(?:na|yein|o)?|give|feed|pilayein|khilayein)\b|"
+            r"\b(pila(?:na|yein|o)?|de(?:na|dein|do)?|khila(?:na|yein|o)?|give|feed)\b.*?(?:\d+\s*(?:ml|mg|drops?|boond|goli|tablet|spoon|chamach)|bottle)"
+        )
+        if re.search(dosing_semantic, norm):
+            return True, "Prescribing specific liquid or tablet dosages is strictly outside ASHA protocol scope. Please consult an ANM or Medical Officer at the PHC (SCP-1.2)."
+
+        # Semantic Medicine Inquiry: [konsi/which/what] + [dawa/medicine/goli/syrup]
+        which_med = r"\b(konsi|kaunsi|which|what|kya)\b.*?\b(dawa(?:i)?|medicine|goli|tablet|syrup)\b"
+        if re.search(which_med, norm):
+            return True, "Selecting or prescribing pharmaceutical treatments is outside ASHA protocol scope. Please refer the patient to a doctor (SCP-1.2)."
 
     return False, ""
 
@@ -406,6 +483,9 @@ class BM25Retriever:
         self.b = 0.75
 
     def search(self, query: str) -> list[str]:
+        if is_conversational_greeting(query):
+            return []
+
         norm = normalize_query(query)
         q_tokens = expand_tokens(norm)
 
@@ -417,6 +497,10 @@ class BM25Retriever:
         # 2. Calcium timing with food (not empty stomach)
         if "calcium" in norm and ("khali pet" in norm or "nashta" in norm or "bhojan" in norm or "khana" in norm):
             return ["ANC-2.3"]
+
+        # 3. Fever home care & tepid sponging / paani ki patti
+        if "tepid" in norm or "sponging" in norm or "paani ki patti" in norm:
+            return ["CHD-2.2"]
 
         # 3. Postpartum IFA / IFA duration
         if ("ifa" in norm or "lal goli" in norm) and ("delivery" in norm or "prasav" in norm or "kitne din" in norm):
@@ -529,6 +613,8 @@ class BM25Retriever:
             scores.append((sec_id, score))
 
         scores.sort(key=lambda x: x[1], reverse=True)
+        if scores[0][1] <= 0.0:
+            return []
         return [scores[0][0]]
 
 
@@ -536,6 +622,8 @@ class BM25Retriever:
 # 5. SALIENCE-GUIDED KEY-FACT EXTRACTOR (< 400 CHARS)
 # =============================================================================
 def build_grounded_answer(query: str, cited_ids: list[str], sec_dict: dict, is_danger: bool, max_chars: int = 390) -> str:
+    if not cited_ids:
+        return "Namaste! I am Sahaaya, your frontline clinical companion. Please enter a specific clinical symptom, patient sign, or health question to look up official MoHFW protocols."
     primary_id = cited_ids[0]
     sec = sec_dict.get(primary_id, {})
     body = sec.get("body", "")

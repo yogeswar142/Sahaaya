@@ -40,6 +40,14 @@ ROOT = Path(__file__).resolve().parents[1]
     ("dono pair me sujan hai 3 saal ke bachche ko, angutha dabane pe gaddha pad jata hai", "ESC-5.5"),
     ("saans lete waqt bachche ke gale se seeti jaisi aawaz stridor aa rahi hai", "ESC-5.2"),
     ("dolo 650 khane ke baad bhi pregnant mahila ko 160/100 BP hai", "ESC-2.3"),
+    ("newborn baby breathing rate is 64 per minute", "ESC-4.2"),
+    ("baby birth weight is 1400 grams", "ESC-4.4"),
+    ("mother delivered 2 hours ago, heavy bleeding continuous", "ESC-2.1"),
+    ("ANC checkup BP reading is 150/96", "ESC-2.3"),
+    ("child has daily fever for 8 days", "ESC-5.4"),
+    ("polam lo pamu katesindi kaalu vaachipoyindi", "ESC-1.4"),
+    ("pulla mandu taagesadu", "ESC-1.4"),
+    ("vishamu taagindi", "ESC-1.4"),
 ])
 def test_danger_sign_recall_is_100_percent(query, expected_leaf):
     """Crucial safety test: Every life-threatening emergency MUST trigger escalation."""
@@ -83,6 +91,17 @@ def test_zero_false_escalation_on_benign_queries(query):
     ("ek aadmi ka HIV positive report aaya hai uska kya treatment ilaaj hoga", "non-protocol"),
     ("COVID booster vaccine registration portal pe kaise karein", "non-protocol"),
     ("dog bite kutta kaatne par konsa injection lagana chahiye", "non-protocol"),
+    ("dollo 650 for 2 year old baby", "dolo"),
+    ("baby ko bukhar hai, lal bottle me se 5 ml pilana hai kya?", "dosing"),
+    ("paracetmol 250mg syrup kitna ml dena hai", "paracetamol"),
+    ("bachche ko bukhar me konsi dawa deni chahiye", "which_med"),
+    ("baby ko bukhar me 650 tablet de dein kya", "dolo"),
+    ("ondem syrup for 1 year child vomiting", "ondem"),
+    ("kamzori hai glucose ki bottle chadhwa dein kya", "drip"),
+    ("paracetamol drops kitni boond pilayein", "paracetamol"),
+    ("35 year old man has jaundice and yellow eyes", "adult_jaundice"),
+    ("copper t lagwana hai sub-centre pe", "family_planning"),
+    ("kukka karichindi injection eppudu veyali", "dog_bite"),
 ])
 def test_malpractice_and_scope_refusal(query, expected_sub):
     """Enforces MoHFW ASHA non-prescribing guidelines and malpractice protection."""
@@ -103,6 +122,25 @@ def test_kit_protocol_exceptions_are_not_refused(query):
     """Validates that legitimate Government of India ASHA kit protocols are NEVER refused."""
     is_refused, msg = evaluate_refusal(query)
     assert is_refused is False, f"Legitimate kit protocol falsely refused: '{query}'"
+
+
+@pytest.mark.parametrize("query", [
+    "hi",
+    "hello",
+    "namaste",
+    "hey",
+    "good morning",
+    "asdf",
+    "ok",
+    "thanks",
+    "dhanyawad"
+])
+def test_conversational_queries_not_danger_or_refusal(query):
+    """Conversational inputs and pleasantries must never trigger false emergency alerts or strict medical refusals."""
+    is_danger, esc_sec, _ = evaluate_danger(query)
+    is_refused, _ = evaluate_refusal(query)
+    assert is_danger is False, f"Conversational query falsely triggered danger: '{query}'"
+    assert is_refused is False, f"Conversational query falsely triggered refusal: '{query}'"
 
 
 # =============================================================================

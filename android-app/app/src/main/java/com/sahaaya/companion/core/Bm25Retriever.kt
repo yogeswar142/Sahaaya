@@ -21,6 +21,7 @@ class Bm25Retriever(
         "some", "such", "than", "that", "the", "their", "theirs", "them", "themselves", "then", "there", "these",
         "they", "this", "those", "through", "to", "too", "under", "until", "up", "very", "was", "we", "were", "what",
         "when", "where", "which", "while", "who", "whom", "why", "will", "with", "you", "your", "yours",
+        "hi", "hello", "hey", "hlo", "namaste", "namaskar",
         "ka", "ki", "ke", "ko", "me", "mein", "par", "se", "aur", "ya", "tha", "the", "thi", "hai", "hain", "kya", "hota", "hote", "hoti",
         "lo", "tho", "ga", "undali", "ivvali", "cheyali", "ela", "eppudu", "em", "ani", "mariyu"
     )
@@ -158,6 +159,11 @@ class Bm25Retriever(
         // Postpartum IFA / IFA duration (180 days after delivery)
         if ((norm.contains("ifa") || norm.contains("lal goli")) && (norm.contains("delivery") || norm.contains("prasav") || norm.contains("kitne din"))) {
             return makeMultiResult(listOf("ANC-2.2", "HBNC-3.1"), "ANC-2.2")
+        }
+
+        // Fever home care & tepid sponging / paani ki patti (CHD-2.2)
+        if (norm.contains("tepid") || norm.contains("sponging") || norm.contains("paani ki patti")) {
+            return makeResult("CHD-2.2")
         }
 
         // MUAC tape screening / color cutoffs (red < 11.5cm, yellow 11.5-12.5cm, green >= 12.5cm)

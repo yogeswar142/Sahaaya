@@ -7,6 +7,11 @@ class SahaayaPipeline(
 ) {
 
     fun process(query: String): PipelineOutput {
+        // Step 0: Conversational Guidance (Greetings, pleasantries, or non-clinical short text)
+        if (isConversational(query)) {
+            return PipelineOutput.ConversationalGuidance()
+        }
+
         // Step 1: Hard-coded danger-sign escalation layer (ALWAYS FIRES FIRST)
         val dangerMatch = dangerRuleEngine.evaluate(query)
         if (dangerMatch.matched && dangerMatch.rule != null) {
@@ -114,6 +119,9 @@ class SahaayaPipeline(
         if (qLower.contains("pair me sujan") && (qLower.contains("kaise check") || qLower.contains("kaise naap"))) {
             return "Press both feet firmly with thumbs for 3 seconds; pitting oedema leaves a dent ($primaryId)."
         }
+        if (qLower.contains("tepid") || qLower.contains("sponging") || qLower.contains("paani ki patti")) {
+            return "For fever: continue feeding, dress child lightly, give fluids, and apply tepid water sponging (paani ki patti) with normal room-temperature water on forehead and body; never use ice or cold water ($primaryId)."
+        }
 
         // 2. Strip leading section title prefix (e.g. "ANC-1.2 Minimum four ANC check-ups.")
         var body = rawText.replace(Regex("^[A-Z]{3,4}-\\d\\.\\d\\s+[^.]+\\.\\s*"), "")
@@ -152,5 +160,32 @@ class SahaayaPipeline(
             result = result.take(330).trim() + "..."
         }
         return "$result ($citeStr)."
+    }
+
+    private fun isConversational(query: String): Boolean {
+        val trimmed = query.trim().lowercase().replace(Regex("[^a-z0-9\\s]"), "")
+        val words = trimmed.split(Regex("\\s+")).filter { it.isNotBlank() }
+        if (words.isEmpty()) return true
+
+        val exactPhrases = setOf(
+            "hi", "hello", "hey", "hlo", "namaste", "namaskar", "namaskaram",
+            "vanakkam", "pranam", "pranaam", "good morning", "good afternoon",
+            "good evening", "shubh prabhat", "shubh sandhya", "kaise ho",
+            "how are you", "sahaaya", "sahaya", "kya haal hai", "help",
+            "madad", "sahayata", "test", "testing", "ok", "theek hai",
+            "thank you", "thanks", "dhanyawad", "dhanyavadalu", "shukriya",
+            "bye", "alvida", "good night", "hie", "helo", "hy", "hii", "hiii"
+        )
+        if (exactPhrases.contains(trimmed)) return true
+
+        val singleTokens = setOf(
+            "hi", "hello", "hey", "hlo", "namaste", "namaskar", "namaskaram",
+            "vanakkam", "pranam", "pranaam", "sahaaya", "sahaya", "hii", "hiii", "helo"
+        )
+        if (words.size == 1 && singleTokens.contains(words[0])) return true
+
+        if (trimmed.length < 3 && !trimmed.all { it.isDigit() }) return true
+
+        return false
     }
 }

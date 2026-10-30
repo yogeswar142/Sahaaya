@@ -38,21 +38,35 @@ class IntentGate {
             )
         }
 
-        // 3. Uncovered conditions & specialized lab diagnostics
-        val uncoveredPattern = Pattern.compile("\\b(hiv|aids|covid|corona|sars|dengue|typhoid|widal|malaria report|cancer|tumor|thyroid|tsh|tuberculosis|tb|fracture|broken bone|haddi toot|dog bite|kutta kata|rabies|cataract|motiyabind|inhaler|nebulizer|ultrasound|usg|x-?ray|ct scan|mri|bistar geela|bedwetting|enuresis)\\b")
+        // 3. Uncovered conditions, adult jaundice, animal bites & family planning (SCP-1.2)
+        val uncoveredPattern = Pattern.compile("\\b(hiv|aids|covid|corona|sars|dengue|typhoid|widal|malaria report|cancer|tumor|thyroid|tsh|tuberculosis|tb|fracture|broken bone|haddi toot|dog bite|kutta kata|kukka karich|bandar|rabies|cataract|motiyabind|inhaler|nebulizer|ultrasound|usg|x-?ray|ct scan|mri|bistar geela|bedwetting|enuresis|jaundice|peeliya|copper[\\s\\-]*t|mala[\\s\\-]*d|condom|garbhnirodhak|abortion|garbhpaat|infertility)\\b")
         val uncMatch = uncoveredPattern.matcher(lower)
         if (uncMatch.find()) {
             val matched = uncMatch.group(0)
-            return GateResult(
-                isRefusal = true,
-                refusalMessage = "Diagnosis and treatment of $matched is outside frontline ASHA protocol scope. Please refer the patient to a Medical Officer at the PHC (SCP-1.2).",
-                reason = "DIAGNOSIS_OUT_OF_SCOPE",
-                citations = listOf("SCP-1.2")
-            )
+            // Allow neonatal/infant jaundice through to child protocols (ESC-4.4 / CHD)
+            val isNewbornJaundice = (matched.contains("jaundice") || matched.contains("peeliya")) &&
+                    (lower.contains("navjaat") || lower.contains("newborn") || lower.contains("baby") || lower.contains("bachch") || lower.contains("din ka") || lower.contains("shishu"))
+            if (!isNewbornJaundice) {
+                return GateResult(
+                    isRefusal = true,
+                    refusalMessage = "Diagnosis and treatment of $matched is outside frontline ASHA protocol scope. Please refer the patient to a Medical Officer at the PHC (SCP-1.2).",
+                    reason = "DIAGNOSIS_OUT_OF_SCOPE",
+                    citations = listOf("SCP-1.2")
+                )
+            }
         }
 
-        // 4. Non-kit prescription medications & pharmaceutical dosing/usage (Dolo 650, Crocin, Antibiotics, IV fluids, etc.)
-        val rxPattern = Pattern.compile("\\b(dolo|dolo\\s*650|crocin|calpol|paracetamol|pcm|paracip|combiflam|ibuprofen|meftal|amoxicillin|augmentin|cefixime|antibiotic|azithromycin|azithral|metformin|amlodipine|telmisartan|insulin|cough syrup|syrup|tablet|capsule|dosage|dose kitna|kitna dena|kitni goli|kitna ml|usage|use kaise|how to use|prescribe|prescription|drops calculation|drip|saline|injection)\\b")
+        // 4. Non-kit prescription medications & pharmaceutical dosing/usage (Dolo 650, Antibiotics, IV fluids, etc.)
+        // Highly resilient against typos (dollo, paracetmol), brand names, standalone 650, and pediatric syrups
+        val rxPattern = Pattern.compile(
+            "\\b(" +
+            "dol+o(?:\\s*650)?|650\\b|crocin?|calpol|paracetam?ol|pcm|paracip|combiflam|ibuprofen|meftal(?:-?spas)?|" +
+            "amox(?:icillin)?|augmentin|cefixime|antibiotic|azithr(?:omycin|al)?|cipro(?:floxacin)?|ofloxacin|norfloxacin|" +
+            "metrogyl|glycomet|metformin|amlodipine|telmisartan|insulin|ondem|vomistop|pantop|ranitidine|cetirizine|" +
+            "cough\\s*syrup|syrup|capsule|dosage|dose(?:\\s+kitna)?|kitna\\s+dena|kitni\\s+goli|kitna\\s+ml|how\\s+to\\s+use|" +
+            "dawa(?:i)?|medicine|tablets?|goli|drops?|boond|drip|saline|bottle\\s*chadh\\w*|injection|sui" +
+            ")\\b"
+        )
         if (!isAshaKitOrVaccine) {
             val rxMatch = rxPattern.matcher(lower)
             if (rxMatch.find()) {
@@ -61,6 +75,31 @@ class IntentGate {
                     isRefusal = true,
                     refusalMessage = "Medicine prescription and usage ($matchedDrug) is outside frontline protocol scope. ASHAs/ANMs cannot prescribe non-kit pharmaceuticals. Please refer to a qualified Medical Officer (SCP-1.2).",
                     reason = "PRESCRIPTION_OUT_OF_SCOPE",
+                    citations = listOf("SCP-1.2")
+                )
+            }
+
+            // Semantic Dosing Guardrail: [Action: give/feed/pilana] + [Amount/Bottle: ml/mg/drops/bottle/spoon]
+            val dosingSemantic = Pattern.compile(
+                "(\\d+\\s*(?:ml|mg|drops?|boond|goli|tablet|spoon|chamach)|bottle).*?\\b(pila(?:na|yein|o)?|de(?:na|dein|do)?|khila(?:na|yein|o)?|give|feed|pilayein|khilayein)\\b|" +
+                "\\b(pila(?:na|yein|o)?|de(?:na|dein|do)?|khila(?:na|yein|o)?|give|feed)\\b.*?(?:\\d+\\s*(?:ml|mg|drops?|boond|goli|tablet|spoon|chamach)|bottle)"
+            )
+            if (dosingSemantic.matcher(lower).find()) {
+                return GateResult(
+                    isRefusal = true,
+                    refusalMessage = "Prescribing specific liquid or tablet dosages is strictly outside ASHA protocol scope. Please consult an ANM or Medical Officer at the PHC (SCP-1.2).",
+                    reason = "SEMANTIC_DOSING_OUT_OF_SCOPE",
+                    citations = listOf("SCP-1.2")
+                )
+            }
+
+            // Semantic Medicine Inquiry: [konsi/which/what] + [dawa/medicine/goli/syrup]
+            val whichMed = Pattern.compile("\\b(konsi|kaunsi|which|what|kya)\\b.*?\\b(dawa(?:i)?|medicine|goli|tablet|syrup)\\b")
+            if (whichMed.matcher(lower).find()) {
+                return GateResult(
+                    isRefusal = true,
+                    refusalMessage = "Selecting or prescribing pharmaceutical treatments is outside ASHA protocol scope. Please refer the patient to a doctor (SCP-1.2).",
+                    reason = "DRUG_SELECTION_OUT_OF_SCOPE",
                     citations = listOf("SCP-1.2")
                 )
             }
