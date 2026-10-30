@@ -2,62 +2,68 @@ package com.sahaaya.companion.core
 
 class IntentGate {
 
-    private val prescriptionKeywords = listOf(
-        "antibiotic", "amoxicillin", "azithromycin", "metronidazole",
-        "ciprofloxacin", "cefixime", "telmisartan", "amlodipine",
-        "metformin", "insulin", "steroid", "prescribe", "prescription",
-        "give medicine", "prescribe cheyyocha"
-    )
-
-    private val diagnosisKeywords = listOf(
-        "diagnose", "diagnosis", "confirm disease", "differential diagnosis",
-        "measles or chickenpox", "test result diagnosis"
-    )
-
-    private val clinicalDosePhrases = listOf(
-        "dosage of", "dose of", "kitna dose", "how much dose", "prescribe dose",
-        "drops calculation", "syrup dosage", "mg dose", "mg tablet kitna"
-    )
-
     fun evaluate(query: String): GateResult {
-        val lower = query.lowercase()
+        val lower = query.lowercase().replace(Regex("[^a-z0-9\\s]"), " ")
 
         // Explicit exceptions for standard ASHA kit protocols:
-        val isAshaKitProtocol = (lower.contains("ifa") || lower.contains("iron tablet") || lower.contains("folic acid")) ||
+        val isAshaKitProtocol = (lower.contains("ifa") || lower.contains("iron") || lower.contains("folic acid") || lower.contains("lal goli")) ||
                 (lower.contains("zinc") && (lower.contains("tablet") || lower.contains("strip") || lower.contains("dast") || lower.contains("diarrhoea"))) ||
-                (lower.contains("ors") && (lower.contains("how much") || lower.contains("volume") || lower.contains("packet") || lower.contains("sachet"))) ||
+                (lower.contains("ors") && (lower.contains("how much") || lower.contains("volume") || lower.contains("packet") || lower.contains("sachet") || lower.contains("jeevan jal") || lower.contains("pani"))) ||
+                (lower.contains("calcium")) ||
+                (lower.contains("albendazole") || lower.contains("keede")) ||
                 (lower.contains("tepid") || lower.contains("sponge") || lower.contains("sponging"))
 
-        // 1. Check prescription drugs
-        for (kw in prescriptionKeywords) {
-            if (lower.contains(kw)) {
+        // 1. PC-PNDT Sex determination
+        if (lower.contains("ladka") && (lower.contains("ladki") || lower.contains("sex") || lower.contains("gender") || lower.contains("jaanch"))) {
+            return GateResult(
+                isRefusal = true,
+                refusalMessage = "Sex determination is prohibited by law under the PC-PNDT Act. Every pregnant woman must receive complete antenatal care (SCP-1.2).",
+                reason = "PCPNDT_PROHIBITED",
+                citations = listOf("SCP-1.2")
+            )
+        }
+
+        // 2. Administrative queries (salary, app issues, login, portal)
+        val adminTerms = listOf("salary", "incentive", "manthan", "login", "otp", "u-win", "uwin", "anmol", "app me", "ration", "ayushman", "praman", "certificate")
+        for (at in adminTerms) {
+            if (lower.contains(at)) {
                 return GateResult(
                     isRefusal = true,
-                    refusalMessage = "Out-of-scope clinical request: ASHA/ANM protocol does not allow independent prescription of prescription medications or antibiotics ($kw). Please refer the patient to a Medical Officer or Doctor at the PHC/CHC.",
-                    reason = "PRESCRIPTION_OUT_OF_SCOPE"
+                    refusalMessage = "Administrative and application support queries are outside clinical protocol scope. Please contact your Block Program Manager (SCP-1.2).",
+                    reason = "ADMINISTRATIVE_OUT_OF_SCOPE",
+                    citations = listOf("SCP-1.2")
                 )
             }
         }
 
-        // 2. Check clinical diagnosis
-        for (kw in diagnosisKeywords) {
-            if (lower.contains(kw)) {
+        // 3. Uncovered adult conditions & specialized lab diagnostics
+        val uncoveredDiag = listOf("thyroid", "tsh", "tb ", "tuberculosis", "cancer", "dengue", "typhoid", "malaria report", "ultrasound", "usg", "x-ray", "xray", "bistar geela", "bedwetting")
+        for (ud in uncoveredDiag) {
+            if (lower.contains(ud)) {
                 return GateResult(
                     isRefusal = true,
-                    refusalMessage = "Out-of-scope diagnostic request: Medical diagnosis must be conducted by a qualified Medical Officer or Doctor with laboratory evaluation. Please refer the patient to the nearest PHC.",
-                    reason = "DIAGNOSIS_OUT_OF_SCOPE"
+                    refusalMessage = "Diagnosis and treatment of $ud is outside frontline ASHA protocol scope. Please refer the patient to a Medical Officer at the PHC (SCP-1.2).",
+                    reason = "DIAGNOSIS_OUT_OF_SCOPE",
+                    citations = listOf("SCP-1.2")
                 )
             }
         }
 
-        // 3. Check clinical dosage requests (excluding standard kit items)
+        // 4. Non-kit prescription medications & pharmaceutical dosing
+        val rxDrugs = listOf(
+            "paracetamol", "amoxicillin", "cefixime", "antibiotic", "azithromycin",
+            "metformin", "amlodipine", "telmisartan", "insulin", "cough syrup", "syrup kitna",
+            "kitni goli", "kitna ml", "dosage", "dose kitna", "kitna dena", "prescribe",
+            "prescription", "drops calculation"
+        )
         if (!isAshaKitProtocol) {
-            for (kw in clinicalDosePhrases) {
-                if (lower.contains(kw)) {
+            for (rx in rxDrugs) {
+                if (lower.contains(rx)) {
                     return GateResult(
                         isRefusal = true,
-                        refusalMessage = "Out-of-scope dosage request: Calculating non-kit pharmaceutical dosages requires a physician prescription. Please consult a Medical Officer.",
-                        reason = "DOSAGE_OUT_OF_SCOPE"
+                        refusalMessage = "Medicine prescription ($rx) is outside frontline protocol scope. ASHAs/ANMs cannot prescribe non-kit pharmaceuticals. Please refer to a Medical Officer (SCP-1.2).",
+                        reason = "PRESCRIPTION_OUT_OF_SCOPE",
+                        citations = listOf("SCP-1.2")
                     )
                 }
             }

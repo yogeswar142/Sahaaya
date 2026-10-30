@@ -12,8 +12,8 @@ android {
         applicationId = "com.sahaaya.companion"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0-poc"
+        versionCode = 6
+        versionName = "1.5.0-H5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

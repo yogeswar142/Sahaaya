@@ -23,6 +23,8 @@ data class DangerRule(
 
 data class DangerMatchResult(
     val matched: Boolean,
+    val leafId: String? = null,
+    val dangerSign: String? = null,
     val rule: DangerRule? = null,
     val matchedPhrase: String? = null
 )
@@ -30,31 +32,40 @@ data class DangerMatchResult(
 data class GateResult(
     val isRefusal: Boolean,
     val refusalMessage: String? = null,
-    val reason: String? = null
+    val reason: String? = null,
+    val citations: List<String> = listOf("SCP-1.2")
 )
 
 data class RetrievalResult(
     val chunk: ProtocolChunk,
-    val score: Double
+    val score: Double,
+    val citations: List<String> = listOf(chunk.id)
 )
 
 sealed class PipelineOutput {
     data class DangerEscalation(
         val rule: DangerRule,
+        val leafId: String = rule.chunkId,
         val matchedPhrase: String,
         val actionText: String = "REFER NOW",
-        val citation: String
+        val citation: String,
+        val citations: List<String> = listOf(leafId),
+        val salientAdvice: String = ""
     ) : PipelineOutput()
 
     data class ScopeRefusal(
         val message: String,
-        val reason: String
+        val reason: String,
+        val citations: List<String> = listOf("SCP-1.2"),
+        val citation: String = "Source: SCP-1.2, Scope of Practice"
     ) : PipelineOutput()
 
     data class ProtocolAnswer(
         val chunk: ProtocolChunk,
         val score: Double,
-        val citationText: String
+        val citations: List<String> = listOf(chunk.id),
+        val citationText: String,
+        val salientAnswer: String = chunk.text
     ) : PipelineOutput()
 
     data class OutOfCorpus(

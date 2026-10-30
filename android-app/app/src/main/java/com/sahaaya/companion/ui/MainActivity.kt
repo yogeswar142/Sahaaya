@@ -18,7 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sahaaya.companion.R
 import com.sahaaya.companion.core.*
 import com.sahaaya.companion.ui.i18n.AppLanguage
@@ -29,6 +31,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var pipeline: SahaayaPipeline
     private lateinit var visitEngine: VisitListEngine
+    private var protocolChunks: List<ProtocolChunk> = emptyList()
     private var registerMembers: List<RegisterMember> = emptyList()
     private var testQuestions: List<Map<String, String>> = emptyList()
 
@@ -43,6 +46,7 @@ class MainActivity : ComponentActivity() {
 
         val chunks = DataLoader.parseProtocolChunks(chunksJson)
         val rules = DataLoader.parseDangerRules(rulesJson)
+        protocolChunks = chunks
         registerMembers = DataLoader.parseRegister(registerCsv)
         testQuestions = DataLoader.parseCsv(questionsCsv)
 
@@ -91,13 +95,16 @@ class MainActivity : ComponentActivity() {
             topBar = {
                 TopAppBar(
                     title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(38.dp)
+                                    .size(36.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(if (isDarkTheme) Color(0xFF041930) else Color.White)
-                                    .padding(4.dp),
+                                    .padding(3.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Image(
@@ -106,18 +113,24 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(
+                                modifier = Modifier.weight(1f, fill = false)
+                            ) {
                                 Text(
                                     Strings.appTitle(language),
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
-                                    style = MaterialTheme.typography.titleMedium
+                                    style = MaterialTheme.typography.titleMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     Strings.appSubtitle(language),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.85f)
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                    color = Color.White.copy(alpha = 0.85f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -128,11 +141,15 @@ class MainActivity : ComponentActivity() {
                     actions = {
                         // 1. Language Switcher Menu
                         Box {
-                            IconButton(onClick = { showLanguageMenu = true }) {
+                            IconButton(
+                                onClick = { showLanguageMenu = true },
+                                modifier = Modifier.size(38.dp)
+                            ) {
                                 Icon(
                                     Icons.Default.Translate,
                                     contentDescription = "Switch Language",
-                                    tint = Color.White
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                             DropdownMenu(
@@ -176,20 +193,28 @@ class MainActivity : ComponentActivity() {
                         }
 
                         // 2. Dark / Bright Theme Toggle
-                        IconButton(onClick = onToggleTheme) {
+                        IconButton(
+                            onClick = onToggleTheme,
+                            modifier = Modifier.size(38.dp)
+                        ) {
                             Icon(
                                 if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
                                 contentDescription = if (isDarkTheme) "Bright Mode" else "Dark Mode",
-                                tint = Color.White
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
 
                         // 3. Benchmark Dialog
-                        IconButton(onClick = { showBenchmarkDialog = true }) {
+                        IconButton(
+                            onClick = { showBenchmarkDialog = true },
+                            modifier = Modifier.size(38.dp)
+                        ) {
                             Icon(
                                 Icons.Default.Speed,
                                 contentDescription = "Benchmark",
-                                tint = Color.White
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -203,7 +228,14 @@ class MainActivity : ComponentActivity() {
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
                         icon = { Icon(Icons.Default.QuestionAnswer, contentDescription = null) },
-                        label = { Text(Strings.tabAsk(language), fontWeight = FontWeight.SemiBold) },
+                        label = {
+                            Text(
+                                Strings.tabAsk(language),
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
                             selectedTextColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
@@ -214,7 +246,32 @@ class MainActivity : ComponentActivity() {
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
                         icon = { Icon(Icons.Default.DateRange, contentDescription = null) },
-                        label = { Text(Strings.tabVisits(language), fontWeight = FontWeight.SemiBold) },
+                        label = {
+                            Text(
+                                Strings.tabVisits(language),
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
+                            selectedTextColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
+                            indicatorColor = if (isDarkTheme) SurfaceElevatedDark else Color(0xFFE0F2F1)
+                        )
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 2,
+                        onClick = { selectedTab = 2 },
+                        icon = { Icon(Icons.Default.MenuBook, contentDescription = null) },
+                        label = {
+                            Text(
+                                Strings.tabGuide(language),
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
                             selectedTextColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
@@ -225,17 +282,25 @@ class MainActivity : ComponentActivity() {
             }
         ) { paddingValues ->
             Box(modifier = Modifier.padding(paddingValues)) {
-                if (selectedTab == 0) {
-                    AskScreen(
+                when (selectedTab) {
+                    0 -> AskScreen(
                         pipeline = pipeline,
                         language = language,
                         isDarkTheme = isDarkTheme,
                         initialQuery = askInitialQuery
                     )
-                } else {
-                    VisitsScreen(
+                    1 -> VisitsScreen(
                         members = registerMembers,
                         visitEngine = visitEngine,
+                        language = language,
+                        isDarkTheme = isDarkTheme,
+                        onNavigateToAsk = { query ->
+                            askInitialQuery = query
+                            selectedTab = 0
+                        }
+                    )
+                    2 -> GuideScreen(
+                        chunks = protocolChunks,
                         language = language,
                         isDarkTheme = isDarkTheme,
                         onNavigateToAsk = { query ->

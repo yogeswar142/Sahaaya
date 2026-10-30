@@ -1,5 +1,8 @@
 package com.sahaaya.companion.core
 
+import org.json.JSONArray
+import org.json.JSONObject
+
 object DataLoader {
 
     fun parseCsv(csvText: String): List<Map<String, String>> {
@@ -58,95 +61,88 @@ object DataLoader {
     }
 
     fun parseProtocolChunks(jsonText: String): List<ProtocolChunk> {
-        // Robust lightweight regex-based parser for protocol_chunks.json
-        val chunkBlocks = jsonText.split(Regex("\\},\\s*\\{"))
         val list = mutableListOf<ProtocolChunk>()
+        try {
+            val array = JSONArray(jsonText)
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                val id = obj.optString("id", "")
+                val title = obj.optString("title", "")
+                val language = obj.optString("language", "en")
+                val text = obj.optString("text", "")
+                val sourceDoc = obj.optString("source_document", obj.optString("sourceDocument", ""))
+                val sourceUrl = obj.optString("source_url", obj.optString("sourceUrl", ""))
+                val pageNum = obj.optInt("page_number", obj.optInt("pageNumber", 1))
 
-        for (block in chunkBlocks) {
-            val id = extractJsonString(block, "id")
-            val title = extractJsonString(block, "title")
-            val language = extractJsonString(block, "language")
-            val text = extractJsonString(block, "text")
-            val sourceDoc = extractJsonString(block, "source_document")
-            val sourceUrl = extractJsonString(block, "source_url")
-            val pageNum = extractJsonInt(block, "page_number")
-
-            if (id.isNotBlank()) {
-                list.add(
-                    ProtocolChunk(
-                        id = id,
-                        title = title,
-                        language = language,
-                        text = text,
-                        sourceDocument = sourceDoc,
-                        sourceUrl = sourceUrl,
-                        pageNumber = pageNum
+                if (id.isNotBlank()) {
+                    list.add(
+                        ProtocolChunk(
+                            id = id,
+                            title = title,
+                            language = language,
+                            text = text,
+                            sourceDocument = sourceDoc,
+                            sourceUrl = sourceUrl,
+                            pageNumber = pageNum
+                        )
                     )
-                )
+                }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
         return list
     }
 
     fun parseDangerRules(jsonText: String): List<DangerRule> {
-        // Danger rules have nested phrasings: "phrasings": { "en": [...], "hinglish": [...], "telugu_latin": [...] }
-        val ruleBlocks = jsonText.split(Regex("\\},\\s*\\{\\s*\"id\":"))
         val list = mutableListOf<DangerRule>()
+        try {
+            val array = JSONArray(jsonText)
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                val id = obj.optString("id", "")
+                val chunkId = obj.optString("chunk_id", "")
+                val category = obj.optString("category", "")
+                val dangerSign = obj.optString("danger_sign", "")
+                val action = obj.optString("action", "REFER NOW")
+                val citation = obj.optString("source_citation", "")
+                val note = obj.optString("note", "")
 
-        for (rawBlock in ruleBlocks) {
-            val block = if (!rawBlock.trim().startsWith("\"id\"")) "\"id\":" + rawBlock else rawBlock
-            val id = extractJsonString(block, "id")
-            val chunkId = extractJsonString(block, "chunk_id")
-            val category = extractJsonString(block, "category")
-            val dangerSign = extractJsonString(block, "danger_sign")
-            val action = extractJsonString(block, "action")
-            val citation = extractJsonString(block, "source_citation")
-            val note = extractJsonString(block, "note")
+                val phrasings = mutableMapOf<String, List<String>>()
+                val phrasingsObj = obj.optJSONObject("phrasings")
+                if (phrasingsObj != null) {
+                    val keys = phrasingsObj.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        val arr = phrasingsObj.optJSONArray(key)
+                        if (arr != null) {
+                            val phrases = mutableListOf<String>()
+                            for (j in 0 until arr.length()) {
+                                phrases.add(arr.getString(j))
+                            }
+                            phrasings[key] = phrases
+                        }
+                    }
+                }
 
-            val enPhrases = extractJsonArray(block, "en")
-            val hinglishPhrases = extractJsonArray(block, "hinglish")
-            val teluguPhrases = extractJsonArray(block, "telugu_latin")
-
-            if (id.isNotBlank()) {
-                val phrasings = mapOf(
-                    "en" to enPhrases,
-                    "hinglish" to hinglishPhrases,
-                    "telugu_latin" to teluguPhrases
-                )
-                list.add(
-                    DangerRule(
-                        id = id,
-                        chunkId = chunkId,
-                        category = category,
-                        dangerSign = dangerSign,
-                        action = action,
-                        sourceCitation = citation,
-                        note = note,
-                        phrasings = phrasings
+                if (id.isNotBlank()) {
+                    list.add(
+                        DangerRule(
+                            id = id,
+                            chunkId = chunkId,
+                            category = category,
+                            dangerSign = dangerSign,
+                            action = action,
+                            sourceCitation = citation,
+                            note = note,
+                            phrasings = phrasings
+                        )
                     )
-                )
+                }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
         return list
-    }
-
-    private fun extractJsonString(block: String, key: String): String {
-        val pattern = Regex("\"$key\"\\s*:\\s*\"([^\"]*)\"")
-        val match = pattern.find(block)
-        return match?.groupValues?.get(1)?.replace("\\n", "\n") ?: ""
-    }
-
-    private fun extractJsonInt(block: String, key: String): Int {
-        val pattern = Regex("\"$key\"\\s*:\\s*([0-9]+)")
-        val match = pattern.find(block)
-        return match?.groupValues?.get(1)?.toIntOrNull() ?: 0
-    }
-
-    private fun extractJsonArray(block: String, arrayKey: String): List<String> {
-        val pattern = Regex("\"$arrayKey\"\\s*:\\s*\\[([^\\]]*)\\]")
-        val match = pattern.find(block) ?: return emptyList()
-        val arrayContent = match.groupValues[1]
-        val itemPattern = Regex("\"([^\"]*)\"")
-        return itemPattern.findAll(arrayContent).map { it.groupValues[1] }.toList()
     }
 }

@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,6 +25,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -72,8 +75,8 @@ Generated offline via Sahaaya Companion
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .fillMaxHeight(0.85f),
+                .fillMaxWidth(0.94f)
+                .fillMaxHeight(0.88f),
             shape = RoundedCornerShape(20.dp),
             color = if (isDarkTheme) SurfaceDark else Color.White,
             tonalElevation = 8.dp
@@ -81,7 +84,7 @@ Generated offline via Sahaaya Companion
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(20.dp)
+                    .padding(16.dp)
             ) {
                 // Header Row
                 Row(
@@ -89,7 +92,10 @@ Generated offline via Sahaaya Companion
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
@@ -111,15 +117,19 @@ Generated offline via Sahaaya Companion
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = if (isDarkTheme) DangerRedDark else DangerRed,
-                                    fontSize = 16.sp
-                                )
+                                    fontSize = 15.sp
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = Strings.referralSubcentre(language),
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     color = if (isDarkTheme) TextSecondaryDark else Color.Gray,
                                     fontSize = 11.sp
-                                )
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -249,7 +259,8 @@ Generated offline via Sahaaya Companion
                 // Actions: Share via SMS, Copy, Close
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
                         onClick = {
@@ -258,36 +269,59 @@ Generated offline via Sahaaya Companion
                             clipboard.setPrimaryClip(clip)
                             Toast.makeText(context, "Slip copied to clipboard", Toast.LENGTH_SHORT).show()
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 42.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(15.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(Strings.copySlip(language), fontSize = 12.sp)
+                        Text(
+                            Strings.copySlip(language),
+                            fontSize = 11.5.sp,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            lineHeight = 13.sp
+                        )
                     }
 
                     Button(
                         onClick = {
-                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                            val smsUri = Uri.parse("smsto:")
+                            val smsIntent = Intent(Intent.ACTION_SENDTO, smsUri).apply {
+                                putExtra("sms_body", slipText)
                                 putExtra(Intent.EXTRA_TEXT, slipText)
-                                type = "text/plain"
                             }
-                            val shareIntent = Intent.createChooser(sendIntent, "Share Emergency Slip via SMS / 108")
-                            context.startActivity(shareIntent)
+                            try {
+                                context.startActivity(smsIntent)
+                            } catch (e: Exception) {
+                                val fallbackIntent = Intent(Intent.ACTION_SEND).apply {
+                                    putExtra(Intent.EXTRA_TEXT, slipText)
+                                    type = "text/plain"
+                                }
+                                context.startActivity(Intent.createChooser(fallbackIntent, "Share Emergency Slip via SMS / 108"))
+                            }
                         },
-                        modifier = Modifier.weight(1.3f),
+                        modifier = Modifier
+                            .weight(1.2f)
+                            .heightIn(min = 42.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isDarkTheme) DangerRedDark else DangerRed,
                             contentColor = Color.White
                         ),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(15.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             Strings.shareSlipSms(language),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            lineHeight = 13.sp
                         )
                     }
                 }

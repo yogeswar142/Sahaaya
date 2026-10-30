@@ -19,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sahaaya.companion.core.PrioritizedVisit
@@ -47,6 +49,7 @@ fun VisitsScreen(
     var selectedFilter by remember { mutableStateOf("ALL") }
     var searchQuery by remember { mutableStateOf("") }
     val completedVisits = remember { mutableStateListOf<String>() }
+    val scheduled48hList = remember { mutableStateListOf<String>() }
     var showDailySummary by remember { mutableStateOf(false) }
     var selectedDangerReferral by remember { mutableStateOf<PrioritizedVisit?>(null) }
 
@@ -102,22 +105,30 @@ fun VisitsScreen(
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = if (isDarkTheme) TextPrimaryDark else SecondaryNavy,
-                        fontSize = 20.sp
-                    )
+                        fontSize = 19.sp
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = Strings.visitsSubheader(filteredList.size, prioritizedVisits.size, language),
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = if (isDarkTheme) TextSecondaryDark else Color(0xFF64748B)
-                    )
+                        color = if (isDarkTheme) TextSecondaryDark else Color(0xFF64748B),
+                        fontSize = 11.sp
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
+
+            Spacer(modifier = Modifier.width(8.dp))
 
             // 1-Tap End-of-Day PHC Summary Report Button
             FilledTonalButton(
                 onClick = { showDailySummary = true },
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                 shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.heightIn(min = 36.dp),
                 colors = ButtonDefaults.filledTonalButtonColors(
                     containerColor = if (isDarkTheme) SurfaceElevatedDark else Color(0xFFE0F2F1),
                     contentColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal
@@ -126,13 +137,15 @@ fun VisitsScreen(
                 Icon(
                     Icons.Default.Assignment,
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(15.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = Strings.endOfDayReportButton(language),
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -199,8 +212,10 @@ fun VisitsScreen(
             placeholder = {
                 Text(
                     Strings.searchHouseholdPlaceholder(language),
-                    fontSize = 13.sp,
-                    color = if (isDarkTheme) TextSecondaryDark else Color(0xFF94A3B8)
+                    fontSize = 12.5.sp,
+                    color = if (isDarkTheme) TextSecondaryDark else Color(0xFF94A3B8),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             },
             leadingIcon = {
@@ -220,7 +235,7 @@ fun VisitsScreen(
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
+                .heightIn(min = 48.dp),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = if (isDarkTheme) SurfaceDark else Color.White,
@@ -295,20 +310,29 @@ fun VisitsScreen(
                     .fillMaxWidth()
                     .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(top = 2.dp, bottom = 16.dp)
+                contentPadding = PaddingValues(top = 2.dp, bottom = 28.dp)
             ) {
                 items(filteredList, key = { it.member.memberId }) { visit ->
                     val isDone = completedVisits.contains(visit.member.memberId)
+                    val is48h = scheduled48hList.contains(visit.member.memberId)
                     BeneficiaryVisitCard(
                         visit = visit,
                         language = language,
                         isDone = isDone,
+                        is48hScheduled = is48h,
                         isDarkTheme = isDarkTheme,
                         onToggleDone = {
                             if (isDone) {
                                 completedVisits.remove(visit.member.memberId)
                             } else {
                                 completedVisits.add(visit.member.memberId)
+                            }
+                        },
+                        onToggle48h = {
+                            if (is48h) {
+                                scheduled48hList.remove(visit.member.memberId)
+                            } else {
+                                scheduled48hList.add(visit.member.memberId)
                             }
                         },
                         onConsultProtocol = { query ->
@@ -364,7 +388,7 @@ fun TriageStatCard(
 ) {
     Card(
         modifier = modifier
-            .height(86.dp)
+            .height(88.dp)
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() }
             .then(
@@ -377,7 +401,7 @@ fun TriageStatCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = 8.dp, vertical = 7.dp),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.Start
         ) {
@@ -389,7 +413,7 @@ fun TriageStatCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(26.dp)
+                        .size(24.dp)
                         .clip(CircleShape)
                         .background(accentColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
@@ -398,32 +422,34 @@ fun TriageStatCard(
                         icon,
                         contentDescription = null,
                         tint = accentColor,
-                        modifier = Modifier.size(15.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                 }
                 Text(
                     text = "$count",
-                    fontSize = 20.sp,
+                    fontSize = 19.sp,
                     fontWeight = FontWeight.Bold,
                     color = accentColor
                 )
             }
 
             // Bottom Column: Title + Subtitle
-            Column {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = title,
-                    fontSize = 12.sp,
+                    fontSize = 11.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = accentColor,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = subtitle,
-                    fontSize = 10.sp,
+                    fontSize = 9.5.sp,
                     fontWeight = FontWeight.Medium,
                     color = accentColor.copy(alpha = 0.85f),
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -435,8 +461,10 @@ fun BeneficiaryVisitCard(
     visit: PrioritizedVisit,
     language: AppLanguage,
     isDone: Boolean,
+    is48hScheduled: Boolean = false,
     isDarkTheme: Boolean,
     onToggleDone: () -> Unit,
+    onToggle48h: () -> Unit = {},
     onConsultProtocol: (String) -> Unit,
     onOpenReferral: (PrioritizedVisit) -> Unit = {}
 ) {
@@ -497,28 +525,35 @@ fun BeneficiaryVisitCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Box(
                         modifier = Modifier
                             .clip(CircleShape)
                             .background(typeBadgeColor.copy(alpha = 0.15f))
-                            .padding(6.dp)
+                            .padding(5.dp)
                     ) {
                         Icon(
                             typeIcon,
                             contentDescription = null,
                             tint = typeBadgeColor,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = typeLabel,
-                        fontSize = 12.sp,
+                        fontSize = 11.5.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = typeBadgeColor
+                        color = typeBadgeColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
+
+                Spacer(modifier = Modifier.width(6.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -554,7 +589,8 @@ fun BeneficiaryVisitCard(
                         text = priorityPillText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = priorityPillColor
+                        color = priorityPillColor,
+                        maxLines = 1
                     )
                 }
             }
@@ -571,6 +607,35 @@ fun BeneficiaryVisitCard(
                 )
             )
 
+            // Dynamic 48-Hour Re-Visit Indicator Banner
+            if (is48hScheduled) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isDarkTheme) Color(0xFF3B270A) else Color(0xFFFEF3C7))
+                        .border(1.dp, if (isDarkTheme) WarningAmberDark else Color(0xFFF59E0B), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.EventRepeat,
+                            contentDescription = null,
+                            tint = if (isDarkTheme) WarningAmberDark else Color(0xFFB45309),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = Strings.scheduled48hBadge(language),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isDarkTheme) WarningAmberDark else Color(0xFF92400E)
+                        )
+                    }
+                }
+            }
+
             // DANGER ALERT BANNER (If previous visit recorded a danger sign)
             if (hasDangerFlag) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -581,27 +646,30 @@ fun BeneficiaryVisitCard(
                     ),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Warning,
-                            contentDescription = "Alert",
-                            tint = if (isDarkTheme) DangerRedDark else DangerRed,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column(modifier = Modifier.weight(1f)) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = "Alert",
+                                tint = if (isDarkTheme) DangerRedDark else DangerRed,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = Strings.dangerFlagAlert(member.dangerFlag, language),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
-                                color = if (isDarkTheme) DangerRedDark else DangerRed
+                                lineHeight = 16.sp,
+                                color = if (isDarkTheme) DangerRedDark else DangerRed,
+                                modifier = Modifier.weight(1f)
                             )
                         }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             OutlinedButton(
                                 onClick = { onOpenReferral(visit) },
                                 colors = ButtonDefaults.outlinedButtonColors(
@@ -611,18 +679,21 @@ fun BeneficiaryVisitCard(
                                     1.dp,
                                     if (isDarkTheme) DangerRedDark else DangerRed
                                 ),
-                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                                shape = RoundedCornerShape(8.dp)
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.heightIn(min = 32.dp)
                             ) {
                                 Text("Slip", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
+                            Spacer(modifier = Modifier.width(6.dp))
                             Button(
                                 onClick = { onConsultProtocol(member.dangerFlag) },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (isDarkTheme) DangerRedDark else DangerRed
                                 ),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                shape = RoundedCornerShape(8.dp)
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.heightIn(min = 32.dp)
                             ) {
                                 Text(Strings.btnReferNow(language), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
@@ -662,12 +733,16 @@ fun BeneficiaryVisitCard(
             // Bottom Action Buttons Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 // Button 1: Mark Visited (Interactive Checklist)
                 OutlinedButton(
                     onClick = onToggleDone,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 38.dp),
+                    contentPadding = PaddingValues(horizontal = 3.dp, vertical = 3.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
                         containerColor = if (isDone) {
                             if (isDarkTheme) SuccessGreenDarkBg else SuccessGreenLight
@@ -683,32 +758,76 @@ fun BeneficiaryVisitCard(
                     Icon(
                         if (isDone) Icons.Default.CheckCircle else Icons.Default.Check,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(13.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         text = if (isDone) Strings.btnDoneChecked(language) else Strings.btnMarkDone(language),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        lineHeight = 12.sp
                     )
                 }
 
-                // Button 2: Protocol Check
+                // Button 2: 48h Dynamic Re-Visit Stamping
+                OutlinedButton(
+                    onClick = onToggle48h,
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 38.dp),
+                    contentPadding = PaddingValues(horizontal = 3.dp, vertical = 3.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (is48hScheduled) {
+                            if (isDarkTheme) Color(0xFF3B270A) else Color(0xFFFEF3C7)
+                        } else Color.Transparent,
+                        contentColor = if (is48hScheduled) {
+                            if (isDarkTheme) WarningAmberDark else Color(0xFFB45309)
+                        } else {
+                            if (isDarkTheme) TextPrimaryDark else Color.DarkGray
+                        }
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(
+                        if (is48hScheduled) Icons.Default.EventRepeat else Icons.Default.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = Strings.btnSchedule48h(language),
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        lineHeight = 12.sp
+                    )
+                }
+
+                // Button 3: Protocol Check
                 Button(
                     onClick = { onConsultProtocol(visit.reason) },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 38.dp),
+                    contentPadding = PaddingValues(horizontal = 3.dp, vertical = 3.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
                         contentColor = if (isDarkTheme) Color(0xFF022C28) else Color.White
                     ),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Icon(Icons.Default.MedicalServices, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(Icons.Default.MedicalServices, contentDescription = null, modifier = Modifier.size(13.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         text = Strings.btnViewProtocol(language),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        lineHeight = 12.sp
                     )
                 }
             }

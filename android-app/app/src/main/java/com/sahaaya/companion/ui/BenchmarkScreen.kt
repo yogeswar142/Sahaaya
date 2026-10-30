@@ -14,8 +14,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import com.sahaaya.companion.core.PipelineOutput
 import com.sahaaya.companion.core.SahaayaPipeline
 import com.sahaaya.companion.ui.i18n.AppLanguage
@@ -120,6 +123,10 @@ fun BenchmarkScreen(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier
+            .fillMaxWidth(0.94f)
+            .heightIn(max = 580.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         containerColor = dialogBg,
         shape = RoundedCornerShape(20.dp),
         confirmButton = {
@@ -132,7 +139,10 @@ fun BenchmarkScreen(
             }
         },
         title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(
                     Icons.Default.Speed,
                     contentDescription = null,
@@ -144,7 +154,9 @@ fun BenchmarkScreen(
                     text = Strings.benchmarkTitle(language),
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
-                    color = titleColor
+                    color = titleColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         },
@@ -169,7 +181,8 @@ fun BenchmarkScreen(
                     enabled = !isRunning,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(44.dp),
+                        .heightIn(min = 44.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = accentTeal,
                         contentColor = if (isDarkTheme) Color(0xFF042F2C) else Color.White
@@ -179,7 +192,10 @@ fun BenchmarkScreen(
                     Text(
                         if (isRunning) "RUNNING BENCHMARK..." else Strings.benchmarkRunSuite(language).uppercase(),
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        lineHeight = 14.sp
                     )
                 }
 
@@ -229,19 +245,23 @@ fun BenchmarkMetricRow(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(
+            style = MaterialTheme.typography.bodySmall.copy(
                 color = labelColor,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                fontSize = 12.5.sp
             ),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1.2f)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium.copy(
+            style = MaterialTheme.typography.bodySmall.copy(
                 fontWeight = FontWeight.Bold,
-                color = valueColor
-            )
+                color = valueColor,
+                fontSize = 12.5.sp,
+                textAlign = TextAlign.End
+            ),
+            modifier = Modifier.weight(1f)
         )
     }
 }

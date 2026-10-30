@@ -2,6 +2,7 @@ package com.sahaaya.companion.ui
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.speech.RecognizerIntent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -15,6 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Mic
@@ -29,9 +32,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sahaaya.companion.R
+import com.sahaaya.companion.core.ClinicalTextFormatter
 import com.sahaaya.companion.core.PipelineOutput
 import com.sahaaya.companion.core.SahaayaPipeline
 import com.sahaaya.companion.ui.i18n.AppLanguage
@@ -135,8 +141,11 @@ fun AskScreen(
             placeholder = {
                 Text(
                     Strings.searchPlaceholder(language),
-                    fontSize = 13.sp,
-                    color = if (isDarkTheme) TextSecondaryDark else Color.Gray
+                    fontSize = 12.5.sp,
+                    lineHeight = 16.sp,
+                    color = if (isDarkTheme) TextSecondaryDark else Color.Gray,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             },
             leadingIcon = {
@@ -163,7 +172,8 @@ fun AskScreen(
         // Primary Action Buttons Row (Search + Voice Mic)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Button(
                 onClick = {
@@ -173,26 +183,28 @@ fun AskScreen(
                 },
                 modifier = Modifier
                     .weight(1f)
-                    .height(48.dp),
+                    .heightIn(min = 48.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
                     contentColor = if (isDarkTheme) Color(0xFF022C28) else Color.White
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Icon(Icons.Default.Search, contentDescription = null)
+                Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     Strings.searchButton(language),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
             FilledTonalIconButton(
                 onClick = startVoiceRecognition,
-                modifier = Modifier
-                    .size(48.dp),
+                modifier = Modifier.size(48.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = IconButtonDefaults.filledTonalIconButtonColors(
                     containerColor = if (isDarkTheme) SurfaceElevatedDark else Color(0xFFE0F2F1),
@@ -206,34 +218,99 @@ fun AskScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Quick Sample Chips
-        Text(
-            text = Strings.quickSamplesLabel(language),
-            style = MaterialTheme.typography.labelMedium.copy(
-                color = if (isDarkTheme) TextSecondaryDark else Color.DarkGray,
-                fontWeight = FontWeight.SemiBold
-            ),
-            modifier = Modifier.padding(bottom = 6.dp)
-        )
+        // Quick Sample Queries Dropdown Selection Menu
+        var isSampleMenuExpanded by remember { mutableStateOf(false) }
 
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            quickPrompts.forEach { prompt ->
-                SuggestionChip(
-                    onClick = {
-                        queryText = prompt
-                        currentOutput = pipeline.process(prompt)
-                    },
-                    label = { Text(prompt, fontSize = 11.sp, maxLines = 1) },
-                    colors = SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = if (isDarkTheme) SurfaceElevatedDark else Color.White
-                    )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedCard(
+                onClick = { isSampleMenuExpanded = !isSampleMenuExpanded },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 44.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.outlinedCardColors(
+                    containerColor = if (isDarkTheme) SurfaceDark else Color.White
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (isDarkTheme) Color(0xFF24364D) else Color(0xFFCBD5E1)
                 )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = Strings.quickSamplesLabel(language).removeSuffix(":"),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isDarkTheme) TextPrimaryDark else Color(0xFF334155),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Icon(
+                        if (isSampleMenuExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = "Dropdown menu",
+                        tint = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            DropdownMenu(
+                expanded = isSampleMenuExpanded,
+                onDismissRequest = { isSampleMenuExpanded = false },
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .background(if (isDarkTheme) SurfaceElevatedDark else Color.White)
+            ) {
+                quickPrompts.forEach { prompt ->
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "•",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text(
+                                    text = prompt,
+                                    fontSize = 13.sp,
+                                    color = if (isDarkTheme) TextPrimaryDark else Color(0xFF0F172A),
+                                    lineHeight = 18.sp
+                                )
+                            }
+                        },
+                        onClick = {
+                            queryText = prompt
+                            currentOutput = pipeline.process(prompt)
+                            isSampleMenuExpanded = false
+                        },
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+                    )
+                }
             }
         }
 
@@ -305,25 +382,30 @@ fun AskScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Icon(
                                     Icons.Default.Warning,
                                     contentDescription = "Danger",
                                     tint = if (isDarkTheme) DangerRedDark else DangerRed,
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(28.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Box(
                                     modifier = Modifier
+                                        .weight(1f, fill = false)
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(if (isDarkTheme) DangerRedDark else DangerRed)
-                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        .padding(horizontal = 10.dp, vertical = 6.dp)
                                 ) {
                                     Text(
                                         text = Strings.emergencyTitle(language),
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp
+                                        fontSize = 14.sp,
+                                        lineHeight = 18.sp
                                     )
                                 }
                             }
@@ -333,6 +415,7 @@ fun AskScreen(
                                 text = "${Strings.dangerDetected(language)} ${output.rule.dangerSign}",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
+                                    lineHeight = 22.sp,
                                     color = if (isDarkTheme) DangerRedDark else DangerRed
                                 )
                             )
@@ -347,6 +430,7 @@ fun AskScreen(
                                 text = Strings.immediateAction(language),
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.Medium,
+                                    lineHeight = 20.sp,
                                     color = if (isDarkTheme) TextPrimaryDark else Color(0xFF0F172A)
                                 )
                             )
@@ -357,35 +441,81 @@ fun AskScreen(
                                 text = output.citation,
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isDarkTheme) TextPrimaryDark else SecondaryNavy
+                                    color = if (isDarkTheme) TextPrimaryDark else SecondaryNavy,
+                                    lineHeight = 16.sp
                                 )
                             )
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // 1-Tap Emergency Referral Slip Action Button
-                            Button(
-                                onClick = { showReferralSlip = true },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(44.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isDarkTheme) DangerRedDark else DangerRed,
-                                    contentColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(10.dp)
+                            // Action Buttons Row: Referral Slip & Share Advisory SMS
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    Icons.Default.LocalHospital,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = Strings.generateReferralSlip(language),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp
-                                )
+                                Button(
+                                    onClick = { showReferralSlip = true },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .heightIn(min = 44.dp),
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isDarkTheme) DangerRedDark else DangerRed,
+                                        contentColor = Color.White
+                                    ),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.LocalHospital,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = Strings.generateReferralSlip(language),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
+                                        lineHeight = 13.sp
+                                    )
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        val smsText = "URGENT DANGER ADVISORY: ${output.rule.dangerSign}. Action: ${output.actionText}. Proceed immediately to nearest FRU/Hospital [${output.leafId}]. - Sahaaya Companion"
+                                        val smsUri = Uri.parse("smsto:")
+                                        val smsIntent = Intent(Intent.ACTION_SENDTO, smsUri).apply {
+                                            putExtra("sms_body", smsText)
+                                            putExtra(Intent.EXTRA_TEXT, smsText)
+                                        }
+                                        try {
+                                            context.startActivity(smsIntent)
+                                        } catch (e: Exception) {
+                                            val sendIntent = Intent().apply {
+                                                action = Intent.ACTION_SEND
+                                                putExtra(Intent.EXTRA_TEXT, smsText)
+                                                type = "text/plain"
+                                            }
+                                            context.startActivity(Intent.createChooser(sendIntent, "Share Emergency Advisory"))
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .heightIn(min = 44.dp),
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text(
+                                        text = Strings.btnShareAdvisory(language),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
+                                        lineHeight = 13.sp
+                                    )
+                                }
                             }
                         }
                     }
@@ -404,26 +534,53 @@ fun AskScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.Info,
-                                    contentDescription = "Refusal",
-                                    tint = if (isDarkTheme) WarningAmberDark else WarningAmber,
-                                    modifier = Modifier.size(28.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = Strings.outOfScopeTitle(language),
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isDarkTheme) WarningAmberDark else WarningAmber
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Info,
+                                        contentDescription = "Refusal",
+                                        tint = if (isDarkTheme) WarningAmberDark else WarningAmber,
+                                        modifier = Modifier.size(22.dp)
                                     )
-                                )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = Strings.outOfScopeTitle(language),
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isDarkTheme) WarningAmberDark else WarningAmber
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (isDarkTheme) WarningAmberDark.copy(alpha = 0.25f) else Color(0xFFFFECB3))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = output.citations.joinToString(", "),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.5.sp,
+                                        color = if (isDarkTheme) WarningAmberDark else Color(0xFFB45309)
+                                    )
+                                }
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
                                 text = output.message,
                                 style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Medium,
+                                    lineHeight = 20.sp,
                                     color = if (isDarkTheme) TextPrimaryDark else Color(0xFF0F172A)
                                 )
                             )
@@ -431,7 +588,17 @@ fun AskScreen(
                             Text(
                                 text = Strings.outOfScopeDesc(language),
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = if (isDarkTheme) TextSecondaryDark else Color(0xFF475569)
+                                    color = if (isDarkTheme) TextSecondaryDark else Color(0xFF475569),
+                                    lineHeight = 16.sp
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = output.citation,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isDarkTheme) TextSecondaryDark else Color(0xFF64748B),
+                                    lineHeight = 15.sp
                                 )
                             )
                         }
@@ -451,54 +618,210 @@ fun AskScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.CheckCircle,
-                                    contentDescription = "Protocol Match",
-                                    tint = if (isDarkTheme) SuccessGreenDark else SuccessGreen,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.CheckCircle,
+                                        contentDescription = "Protocol Match",
+                                        tint = if (isDarkTheme) SuccessGreenDark else SuccessGreen,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = Strings.verifiedAnswerHeader(language),
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = Strings.verifiedAnswerHeader(language),
-                                    style = MaterialTheme.typography.titleMedium.copy(
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (isDarkTheme) PrimaryTealDarkTheme.copy(alpha = 0.2f) else Color(0xFFE0F2F1))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = output.citations.joinToString(", "),
                                         fontWeight = FontWeight.Bold,
+                                        fontSize = 11.5.sp,
                                         color = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal
                                     )
-                                )
+                                }
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
                                 text = output.chunk.title,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
+                                lineHeight = 19.sp,
                                 color = if (isDarkTheme) TextPrimaryDark else Color(0xFF0F172A)
                             )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = output.chunk.text,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    lineHeight = 20.sp,
-                                    color = if (isDarkTheme) TextPrimaryDark else Color(0xFF1E293B)
-                                )
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            HorizontalDivider(color = if (isDarkTheme) Color(0xFF24364D) else Color.LightGray)
+
+                            // Highlighted Salient Clinical Guidance Box
                             Spacer(modifier = Modifier.height(8.dp))
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isDarkTheme) SuccessGreenDarkBg else SuccessGreenLight)
-                                    .padding(8.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isDarkTheme) Color(0xFF0F2B28) else Color(0xFFF0FDF4))
+                                    .border(1.dp, if (isDarkTheme) SuccessGreenDark else Color(0xFFBBF7D0), RoundedCornerShape(10.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Text(
+                                    text = output.salientAnswer,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        lineHeight = 22.sp,
+                                        color = if (isDarkTheme) TextPrimaryDark else Color(0xFF14532D)
+                                    )
+                                )
+                            }
+
+                            val detailedPoints = remember(output.chunk.id) {
+                                ClinicalTextFormatter.formatToPoints(output.chunk.text, excludeText = output.salientAnswer)
+                            }
+                            var isDetailedExpanded by remember(output.chunk.id) { mutableStateOf(false) }
+
+                            if (detailedPoints.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                // Expandable Toggle Button above citation box
+                                TextButton(
+                                    onClick = { isDetailedExpanded = !isDetailedExpanded },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentPadding = PaddingValues(vertical = 4.dp)
+                                ) {
+                                    Icon(
+                                        if (isDetailedExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        contentDescription = null,
+                                        tint = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = if (isDetailedExpanded) {
+                                            Strings.btnHideDetailedProtocol(language)
+                                        } else {
+                                            Strings.btnViewDetailedProtocol(detailedPoints.size, language)
+                                        },
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal
+                                    )
+                                }
+
+                                if (isDetailedExpanded) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (isDarkTheme) Color(0xFF132233) else Color(0xFFF8FAFC)
+                                        ),
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            1.dp,
+                                            if (isDarkTheme) Color(0xFF243B53) else Color(0xFFE2E8F0)
+                                        )
+                                    ) {
+                                        Column(modifier = Modifier.padding(14.dp)) {
+                                            Text(
+                                                text = Strings.detailedProtocolTitle(language),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            detailedPoints.forEach { point ->
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(vertical = 3.dp),
+                                                    verticalAlignment = Alignment.Top
+                                                ) {
+                                                    Text(
+                                                        text = "•",
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 14.sp,
+                                                        color = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
+                                                        modifier = Modifier.padding(end = 8.dp)
+                                                    )
+                                                    Text(
+                                                        text = point,
+                                                        style = MaterialTheme.typography.bodySmall.copy(
+                                                            lineHeight = 18.sp,
+                                                            fontWeight = FontWeight.Normal,
+                                                            color = if (isDarkTheme) TextPrimaryDark else Color(0xFF1E293B)
+                                                        ),
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                            HorizontalDivider(color = if (isDarkTheme) Color(0xFF24364D) else Color.LightGray)
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
                                     text = output.citationText,
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         fontWeight = FontWeight.SemiBold,
-                                        color = if (isDarkTheme) SuccessGreenDark else SuccessGreen
-                                    )
+                                        color = if (isDarkTheme) SuccessGreenDark else SuccessGreen,
+                                        lineHeight = 16.sp
+                                    ),
+                                    modifier = Modifier.weight(1f)
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        val smsText = "Sahaaya Care Advisory: ${output.salientAnswer} [Citation: ${output.citations.joinToString(", ")}]"
+                                        val smsUri = Uri.parse("smsto:")
+                                        val smsIntent = Intent(Intent.ACTION_SENDTO, smsUri).apply {
+                                            putExtra("sms_body", smsText)
+                                            putExtra(Intent.EXTRA_TEXT, smsText)
+                                        }
+                                        try {
+                                            context.startActivity(smsIntent)
+                                        } catch (e: Exception) {
+                                            val sendIntent = Intent().apply {
+                                                action = Intent.ACTION_SEND
+                                                putExtra(Intent.EXTRA_TEXT, smsText)
+                                                type = "text/plain"
+                                            }
+                                            context.startActivity(Intent.createChooser(sendIntent, "Share Care Advisory"))
+                                        }
+                                    },
+                                    modifier = Modifier.heightIn(min = 36.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        text = Strings.btnShareAdvisory(language),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1
+                                    )
+                                }
                             }
                         }
                     }
@@ -533,6 +856,8 @@ fun AskScreen(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(28.dp))
     }
 
     // Emergency Referral Slip Modal
