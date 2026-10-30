@@ -199,40 +199,43 @@ Sahaaya/
 
 ## 🚀 Quick Start & Build Instructions
 
-### 0. Quick Download (Install on Android Device)
-Evaluators, judges, and field testers can download and install the standalone APK directly without compiling from source:
+### 0. Quick Evaluation & Benchmark Verification
+Evaluators and judges can reproduce the official TalentAP H5 benchmark score and test suites with single commands:
+
+```bash
+# 1. Run the official H5 scorer (evaluates submission against dev truth)
+python3 evaluate.py
+
+# 2. Run the 91-test Python clinical test suite (danger recall, scope refusal, unit conversions)
+pytest tests/
+
+# 3. Run the pure Kotlin JVM unit tests on Android core logic
+cd android-app && ./gradlew testDebugUnitTest
+```
+*Expected Result: `PRIMARY SCORE: 0.9310`, `ESCALATION GATE: PASS (100% recall, 0.00% false alarm)`, `visit_list_score: 1.0000`, 91/91 Python tests passed, 25/25 Android JVM tests passed.*
+
+### 1. Download Pre-built APK (Direct Install)
 - 📲 **[Download Sahaaya v1.0.0 APK (16.9 MB)](https://github.com/yogeswar142/Sahaaya/releases/latest/download/Sahaaya-v1.0.0.apk)**
 - 📦 **[View GitHub Releases & Release Notes](https://github.com/yogeswar142/Sahaaya/releases/latest)**
 
 *(Requires Android 8.0+ / API 26+. Works 100% offline in Airplane Mode with zero cloud dependencies).*
 
-### Prerequisites (For Developers Building from Source)
-- **JDK 17 LTS**
-- **Android SDK (API 34 / 35)**
-- **Gradle 8.14** (bundled via `./android-app/gradlew.bat`)
-
-### 1. Run Pure JVM Standalone Tests (No Emulator or Device Needed)
-The core logic has zero Android framework imports and can be verified on any standard JVM in milliseconds:
-
-```powershell
-# Set Java 17 environment
-$env:JAVA_HOME = "C:\Users\yoges\develop\jdk-17\jdk-17.0.20.1+1"
-$env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
-
-# Run precompiled test runner
-java -jar test-runner.jar
-```
-*Output: 15 / 15 tests passed (100% success rate on danger signs, scope refusals, BM25 retrieval, and visit prioritization).*
-
-### 2. Build the Android APK
-```powershell
+### 2. Build the Android APK from Source
+```bash
+# Build Debug APK
 cd android-app
-.\gradlew.bat assembleDebug
+./gradlew assembleDebug       # Linux / macOS
+.\gradlew.bat assembleDebug   # Windows PowerShell
+
+# Build Release APK
+./gradlew assembleRelease
 ```
-*Generated package: `android-app/app/build/outputs/apk/debug/app-debug.apk`.*
+*Generated packages:*
+* Debug APK: `android-app/app/build/outputs/apk/debug/app-debug.apk` (16.9 MB)
+* Release APK: `android-app/app/build/outputs/apk/release/app-release-unsigned.apk` (11.0 MB)
 
 ### 3. Install via ADB onto a Physical Phone
-```powershell
+```bash
 adb install -r android-app/app/build/outputs/apk/debug/app-debug.apk
 ```
 
