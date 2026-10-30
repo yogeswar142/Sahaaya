@@ -21,6 +21,12 @@ object Strings {
         AppLanguage.TELUGU -> "ఫ్రంట్‌లైన్ ఆరోగ్య సహచరి • v1.5.0 (H5)"
     }
 
+    fun tabHome(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Home"
+        AppLanguage.HINDI -> "होम"
+        AppLanguage.TELUGU -> "హోమ్"
+    }
+
     fun tabAsk(lang: AppLanguage): String = when (lang) {
         AppLanguage.ENGLISH -> "Ask Sahaaya"
         AppLanguage.HINDI -> "सहाय से पूछें"

@@ -33,6 +33,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var visitEngine: VisitListEngine
     private var protocolChunks: List<ProtocolChunk> = emptyList()
     private var registerMembers: List<RegisterMember> = emptyList()
+    private var householdMembers: List<HouseholdMember> = emptyList()
     private var testQuestions: List<Map<String, String>> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,6 +50,14 @@ class MainActivity : ComponentActivity() {
         protocolChunks = chunks
         registerMembers = DataLoader.parseRegister(registerCsv)
         testQuestions = DataLoader.parseCsv(questionsCsv)
+
+        // Load complete household register for rich search & overview
+        val householdCsv = try {
+            assets.open("household_register.csv").bufferedReader().use { it.readText() }
+        } catch (_: Exception) { "" }
+        if (householdCsv.isNotBlank()) {
+            householdMembers = DataLoader.parseHouseholdRegister(householdCsv)
+        }
 
         val dangerEngine = DangerRuleEngine(rules)
         val intentGate = IntentGate()
@@ -79,16 +88,29 @@ class MainActivity : ComponentActivity() {
         language: AppLanguage,
         onLanguageChange: (AppLanguage) -> Unit
     ) {
+        var showPortalWelcome by rememberSaveable { mutableStateOf(false) }
         var selectedTab by rememberSaveable { mutableStateOf(0) }
         var showBenchmarkDialog by remember { mutableStateOf(false) }
         var showLanguageMenu by remember { mutableStateOf(false) }
         var askInitialQuery by remember { mutableStateOf<String?>(null) }
+        var visitsFilter by remember { mutableStateOf("ALL") }
+        var visitsSearchQuery by remember { mutableStateOf("") }
+        var referralTarget by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
         // Choose logo based on mode: Dark mode uses glowing squircle, Light mode uses bright symbol
         val logoRes = if (isDarkTheme) {
             R.drawable.ic_sahaaya_logo
         } else {
             R.drawable.ic_sahaaya_symbol_bright
+        }
+
+        if (showPortalWelcome) {
+            PortalWelcomeScreen(
+                language = language,
+                isDarkTheme = isDarkTheme,
+                onEnterPortal = { showPortalWelcome = false }
+            )
+            return
         }
 
         Scaffold(
@@ -126,9 +148,9 @@ class MainActivity : ComponentActivity() {
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
-                                    Strings.appSubtitle(language),
-                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                    color = Color.White.copy(alpha = 0.85f),
+                                    "Frontline Clinical Companion",
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                                    color = Color.White.copy(alpha = 0.9f),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -192,7 +214,20 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // 2. Dark / Bright Theme Toggle
+                        // 2. Info & Benchmark Dialog
+                        IconButton(
+                            onClick = { showBenchmarkDialog = true },
+                            modifier = Modifier.size(38.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = "Benchmark & Info",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        // 3. Dark / Bright Theme Toggle
                         IconButton(
                             onClick = onToggleTheme,
                             modifier = Modifier.size(38.dp)
@@ -205,14 +240,14 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 3. Benchmark Dialog
+                        // 4. Portal Open Screen Button (Door icon)
                         IconButton(
-                            onClick = { showBenchmarkDialog = true },
+                            onClick = { showPortalWelcome = true },
                             modifier = Modifier.size(38.dp)
                         ) {
                             Icon(
-                                Icons.Default.Speed,
-                                contentDescription = "Benchmark",
+                                Icons.Default.ExitToApp,
+                                contentDescription = "Portal Open Screen",
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -224,14 +259,16 @@ class MainActivity : ComponentActivity() {
                 NavigationBar(
                     containerColor = if (isDarkTheme) SurfaceDark else SurfaceWhite
                 ) {
+                    // Tab 0: Home
                     NavigationBarItem(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
-                        icon = { Icon(Icons.Default.QuestionAnswer, contentDescription = null) },
+                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
                         label = {
                             Text(
-                                Strings.tabAsk(language),
+                                Strings.tabHome(language),
                                 fontWeight = FontWeight.SemiBold,
+                                fontSize = 11.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -242,6 +279,8 @@ class MainActivity : ComponentActivity() {
                             indicatorColor = if (isDarkTheme) SurfaceElevatedDark else Color(0xFFE0F2F1)
                         )
                     )
+
+                    // Tab 1: Today's Visits
                     NavigationBarItem(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
@@ -250,6 +289,7 @@ class MainActivity : ComponentActivity() {
                             Text(
                                 Strings.tabVisits(language),
                                 fontWeight = FontWeight.SemiBold,
+                                fontSize = 11.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -260,14 +300,38 @@ class MainActivity : ComponentActivity() {
                             indicatorColor = if (isDarkTheme) SurfaceElevatedDark else Color(0xFFE0F2F1)
                         )
                     )
+
+                    // Tab 2: Ask Sahaaya
                     NavigationBarItem(
                         selected = selectedTab == 2,
                         onClick = { selectedTab = 2 },
+                        icon = { Icon(Icons.Default.QuestionAnswer, contentDescription = null) },
+                        label = {
+                            Text(
+                                Strings.tabAsk(language),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
+                            selectedTextColor = if (isDarkTheme) PrimaryTealDarkTheme else PrimaryTeal,
+                            indicatorColor = if (isDarkTheme) SurfaceElevatedDark else Color(0xFFE0F2F1)
+                        )
+                    )
+
+                    // Tab 3: Protocols
+                    NavigationBarItem(
+                        selected = selectedTab == 3,
+                        onClick = { selectedTab = 3 },
                         icon = { Icon(Icons.Default.MenuBook, contentDescription = null) },
                         label = {
                             Text(
                                 Strings.tabGuide(language),
                                 fontWeight = FontWeight.SemiBold,
+                                fontSize = 11.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -283,11 +347,23 @@ class MainActivity : ComponentActivity() {
         ) { paddingValues ->
             Box(modifier = Modifier.padding(paddingValues)) {
                 when (selectedTab) {
-                    0 -> AskScreen(
-                        pipeline = pipeline,
+                    0 -> HomeScreen(
+                        householdMembers = householdMembers,
+                        registerMembers = registerMembers,
                         language = language,
                         isDarkTheme = isDarkTheme,
-                        initialQuery = askInitialQuery
+                        onNavigateToAsk = { query ->
+                            askInitialQuery = query
+                            selectedTab = 2
+                        },
+                        onNavigateToVisits = { filter, search ->
+                            visitsFilter = filter
+                            visitsSearchQuery = search
+                            selectedTab = 1
+                        },
+                        onOpenReferral = { name, famId, reason ->
+                            referralTarget = Triple(name, famId, reason)
+                        }
                     )
                     1 -> VisitsScreen(
                         members = registerMembers,
@@ -296,16 +372,24 @@ class MainActivity : ComponentActivity() {
                         isDarkTheme = isDarkTheme,
                         onNavigateToAsk = { query ->
                             askInitialQuery = query
-                            selectedTab = 0
-                        }
+                            selectedTab = 2
+                        },
+                        initialFilter = visitsFilter,
+                        initialSearch = visitsSearchQuery
                     )
-                    2 -> GuideScreen(
+                    2 -> AskScreen(
+                        pipeline = pipeline,
+                        language = language,
+                        isDarkTheme = isDarkTheme,
+                        initialQuery = askInitialQuery
+                    )
+                    3 -> GuideScreen(
                         chunks = protocolChunks,
                         language = language,
                         isDarkTheme = isDarkTheme,
                         onNavigateToAsk = { query ->
                             askInitialQuery = query
-                            selectedTab = 0
+                            selectedTab = 2
                         }
                     )
                 }
@@ -319,6 +403,19 @@ class MainActivity : ComponentActivity() {
                         isDarkTheme = isDarkTheme,
                         language = language,
                         onDismiss = { showBenchmarkDialog = false }
+                    )
+                }
+
+                referralTarget?.let { (patientName, familyId, reason) ->
+                    ReferralSlipDialog(
+                        isOpen = true,
+                        onDismiss = { referralTarget = null },
+                        patientName = "$patientName ($familyId)",
+                        dangerSign = reason,
+                        category = "EMERGENCY REFERRAL",
+                        citation = "MoHFW Clinical Protocol",
+                        language = language,
+                        isDarkTheme = isDarkTheme
                     )
                 }
             }

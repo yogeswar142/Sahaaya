@@ -60,6 +60,37 @@ object DataLoader {
         }
     }
 
+    fun parseHouseholdRegister(csvText: String): List<HouseholdMember> {
+        val rows = parseCsv(csvText)
+        return rows.map { row ->
+            val memberId = row["member_id"] ?: ""
+            val householdId = row["household_id"] ?: ""
+            val name = row["name"] ?: ""
+            val sex = row["sex"] ?: ""
+            val village = row["village"] ?: ""
+            val ashaId = row["asha_id"] ?: ""
+            val relation = row["relation"] ?: ""
+            val dob = row["dob"] ?: ""
+            val isPregnant = (row["pregnant"] ?: "").equals("Y", ignoreCase = true)
+            val lastBp = row["last_bp_reading"] ?: row["last_anc_bp"] ?: ""
+            val lastHb = row["last_hb_gdl"] ?: ""
+
+            HouseholdMember(
+                memberId = memberId,
+                householdId = householdId,
+                village = village,
+                ashaId = ashaId,
+                name = name,
+                relation = relation,
+                sex = sex,
+                dob = dob,
+                isPregnant = isPregnant,
+                lastBpReading = lastBp,
+                lastHbGdl = lastHb
+            )
+        }
+    }
+
     fun parseProtocolChunks(jsonText: String): List<ProtocolChunk> {
         val list = mutableListOf<ProtocolChunk>()
         try {

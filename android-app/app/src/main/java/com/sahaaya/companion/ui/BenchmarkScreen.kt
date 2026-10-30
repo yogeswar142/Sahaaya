@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -23,6 +24,9 @@ import com.sahaaya.companion.core.PipelineOutput
 import com.sahaaya.companion.core.SahaayaPipeline
 import com.sahaaya.companion.ui.i18n.AppLanguage
 import com.sahaaya.companion.ui.i18n.Strings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 data class BenchmarkStats(
@@ -45,71 +49,89 @@ fun BenchmarkScreen(
     language: AppLanguage,
     onDismiss: () -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var stats by remember { mutableStateOf<BenchmarkStats?>(null) }
     var isRunning by remember { mutableStateOf(false) }
+    var progressCount by remember { mutableStateOf(0) }
 
-    fun runBenchmark() {
-        isRunning = true
-        val latencies = mutableListOf<Long>()
-        var escalationPass = 0
-        var totalEscalation = 0
-        var refusalPass = 0
-        var totalRefusal = 0
-        var citationPass = 0
-        var totalInScope = 0
+    fun runBenchmarkAsync() {
+        if (isRunning) return
+        coroutineScope.launch(Dispatchers.Default) {
+            withContext(Dispatchers.Main) {
+                isRunning = true
+                progressCount = 0
+            }
 
-        // Measure memory before
-        val memInfo = Debug.MemoryInfo()
-        Debug.getMemoryInfo(memInfo)
-        val pssBefore = memInfo.totalPss.toLong()
+            val latencies = mutableListOf<Long>()
+            var escalationPass = 0
+            var totalEscalation = 0
+            var refusalPass = 0
+            var totalRefusal = 0
+            var citationPass = 0
+            var totalInScope = 0
 
-        for (row in testQuestions) {
-            val q = row["question"] ?: ""
-            val mustEscalate = (row["must_escalate"] ?: "false").toBoolean()
-            val isOutOfScope = (row["expected_chunk_id"] ?: "") == "OUT_OF_SCOPE"
+            // Measure memory before
+            val memInfo = Debug.MemoryInfo()
+            Debug.getMemoryInfo(memInfo)
+            val pssBefore = memInfo.totalPss.toLong()
 
-            val start = System.nanoTime()
-            val output = pipeline.process(q)
-            val end = System.nanoTime()
-            latencies.add((end - start) / 1000) // us
+            for ((index, row) in testQuestions.withIndex()) {
+                val q = row["question"] ?: ""
+                val mustEscalate = (row["must_escalate"] ?: "false").toBoolean()
+                val isOutOfScope = (row["expected_chunk_id"] ?: "") == "OUT_OF_SCOPE"
 
-            if (mustEscalate) {
-                totalEscalation++
-                if (output is PipelineOutput.DangerEscalation) escalationPass++
-            } else if (isOutOfScope) {
-                totalRefusal++
-                if (output is PipelineOutput.ScopeRefusal) refusalPass++
+                val start = System.nanoTime()
+                val output = pipeline.process(q)
+                val end = System.nanoTime()
+                latencies.add((end - start) / 1000) // us
+
+                if (mustEscalate) {
+                    totalEscalation++
+                    if (output is PipelineOutput.DangerEscalation) escalationPass++
+                } else if (isOutOfScope) {
+                    totalRefusal++
+                    if (output is PipelineOutput.ScopeRefusal) refusalPass++
+                } else {
+                    totalInScope++
+                    if (output is PipelineOutput.ProtocolAnswer) citationPass++
+                }
+
+                // Update live progress on Main thread
+                withContext(Dispatchers.Main) {
+                    progressCount = index + 1
+                }
+            }
+
+            Debug.getMemoryInfo(memInfo)
+            val pssAfter = memInfo.totalPss.toLong()
+            val peakMem = if (pssAfter >= pssBefore) pssAfter - pssBefore else pssAfter
+
+            latencies.sort()
+            val medianUs = if (latencies.isNotEmpty()) latencies[latencies.size / 2] else 0L
+            val p95Us = if (latencies.isNotEmpty()) latencies[(latencies.size * 0.95).toInt()] else 0L
+
+            val apkMb = if (apkFile != null && apkFile.exists()) {
+                apkFile.length() / (1024.0 * 1024.0)
             } else {
-                totalInScope++
-                if (output is PipelineOutput.ProtocolAnswer) citationPass++
+                16.1 // Measured APK footprint
+            }
+
+            val evaluatedStats = BenchmarkStats(
+                totalEvaluated = testQuestions.size,
+                dangerRecallPct = if (totalEscalation > 0) (escalationPass.toDouble() / totalEscalation) * 100 else 100.0,
+                refusalAccuracyPct = if (totalRefusal > 0) (refusalPass.toDouble() / totalRefusal) * 100 else 100.0,
+                citationRatePct = if (totalInScope > 0) (citationPass.toDouble() / totalInScope) * 100 else 100.0,
+                medianLatencyMs = medianUs / 1000.0,
+                p95LatencyMs = p95Us / 1000.0,
+                peakMemoryKb = peakMem,
+                apkSizeMb = apkMb
+            )
+
+            withContext(Dispatchers.Main) {
+                stats = evaluatedStats
+                isRunning = false
             }
         }
-
-        Debug.getMemoryInfo(memInfo)
-        val pssAfter = memInfo.totalPss.toLong()
-        val peakMem = if (pssAfter >= pssBefore) pssAfter - pssBefore else pssAfter
-
-        latencies.sort()
-        val medianUs = if (latencies.isNotEmpty()) latencies[latencies.size / 2] else 0L
-        val p95Us = if (latencies.isNotEmpty()) latencies[(latencies.size * 0.95).toInt()] else 0L
-
-        val apkMb = if (apkFile != null && apkFile.exists()) {
-            apkFile.length() / (1024.0 * 1024.0)
-        } else {
-            16.1 // Measured APK footprint
-        }
-
-        stats = BenchmarkStats(
-            totalEvaluated = testQuestions.size,
-            dangerRecallPct = if (totalEscalation > 0) (escalationPass.toDouble() / totalEscalation) * 100 else 100.0,
-            refusalAccuracyPct = if (totalRefusal > 0) (refusalPass.toDouble() / totalRefusal) * 100 else 100.0,
-            citationRatePct = if (totalInScope > 0) (citationPass.toDouble() / totalInScope) * 100 else 100.0,
-            medianLatencyMs = medianUs / 1000.0,
-            p95LatencyMs = p95Us / 1000.0,
-            peakMemoryKb = peakMem,
-            apkSizeMb = apkMb
-        )
-        isRunning = false
     }
 
     // High-contrast theme-aware colors
@@ -177,11 +199,11 @@ fun BenchmarkScreen(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Button(
-                    onClick = { runBenchmark() },
+                    onClick = { runBenchmarkAsync() },
                     enabled = !isRunning,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 44.dp),
+                        .heightIn(min = 46.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = accentTeal,
@@ -189,13 +211,46 @@ fun BenchmarkScreen(
                     ),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text(
-                        if (isRunning) "RUNNING BENCHMARK..." else Strings.benchmarkRunSuite(language).uppercase(),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        lineHeight = 14.sp
+                    if (isRunning) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = if (isDarkTheme) Color(0xFF042F2C) else Color.White
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "RUNNING BENCHMARK ($progressCount/${testQuestions.size})...",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = Strings.benchmarkRunSuite(language).uppercase(),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            lineHeight = 14.sp
+                        )
+                    }
+                }
+
+                if (isRunning) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { if (testQuestions.isNotEmpty()) progressCount.toFloat() / testQuestions.size else 0f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp)),
+                        color = accentTeal,
+                        trackColor = if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFE2E8F0)
                     )
                 }
 

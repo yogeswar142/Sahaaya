@@ -105,3 +105,21 @@ data class PrioritizedVisit(
     val reason: String,
     val daysDiff: Long
 )
+
+
+data class HouseholdMember(
+    val memberId: String,
+    val householdId: String,
+    val village: String = "",
+    val ashaId: String = "",
+    val name: String,
+    val relation: String = "",
+    val sex: String = "",
+    val dob: String = "",
+    val isPregnant: Boolean = false,
+    val lastBpReading: String = "",
+    val lastHbGdl: String = "",
+    val isDanger: Boolean = false,
+    val dangerReason: String = "",
+    val dueItem: String = ""
+)

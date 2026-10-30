@@ -1,4 +1,15 @@
-# Build outputs
+# Environment & Secrets (Coding Guidelines Rule 3)
+.env
+.env.*
+!.env.example
+
+# Large Data & Models (Coding Guidelines Rule 2 & 11)
+models/
+.venv/
+venv/
+node_modules/
+
+# Build outputs & caches
 android-app/build/
 android-app/app/build/
 android-app/.gradle/
@@ -14,15 +25,17 @@ tmp_slides/
 test-runner.jar
 scripts/template.pdf
 *detailed.csv
+*.tmp
+current_screen.png
 
 # OS and IDE files
 .idea/
+.vscode/
 .DS_Store
 Thumbs.db
 *.iml
 local.properties
 ~$*
-*.tmp
 
 # Python cache
 __pycache__/

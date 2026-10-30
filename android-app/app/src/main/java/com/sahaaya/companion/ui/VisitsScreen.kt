@@ -39,6 +39,8 @@ fun VisitsScreen(
     language: AppLanguage,
     isDarkTheme: Boolean,
     onNavigateToAsk: (String) -> Unit = {},
+    initialFilter: String = "ALL",
+    initialSearch: String = "",
     modifier: Modifier = Modifier
 ) {
     val today = remember { LocalDate.parse("2026-10-18") }
@@ -46,8 +48,8 @@ fun VisitsScreen(
         visitEngine.prioritizeVisits(members, today)
     }
 
-    var selectedFilter by remember { mutableStateOf("ALL") }
-    var searchQuery by remember { mutableStateOf("") }
+    var selectedFilter by remember(initialFilter) { mutableStateOf(initialFilter) }
+    var searchQuery by remember(initialSearch) { mutableStateOf(initialSearch) }
     val completedVisits = remember { mutableStateListOf<String>() }
     val scheduled48hList = remember { mutableStateListOf<String>() }
     var showDailySummary by remember { mutableStateOf(false) }
