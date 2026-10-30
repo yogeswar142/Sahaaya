@@ -20,11 +20,11 @@ scripts/template.pdf
 Thumbs.db
 *.iml
 local.properties
+~$*
+*.tmp
 
 # Python cache
 __pycache__/
 *.py[cod]
 *$py.class
-
-# External problem statement guidelines pack
-guidlines-etc/
+.pytest_cache/

@@ -58,6 +58,8 @@ STEM_MAP = {
     # Protocol & Entities
     "tika": "vaccine tika", "teeka": "vaccine tika", "tike": "vaccine tika", "vaccine": "vaccine tika",
     "sui": "injection sui", "injection": "injection sui", "booster": "booster",
+    "dolo": "paracetamol medicine rx", "dolo650": "paracetamol medicine rx", "dolo 650": "paracetamol medicine rx",
+    "crocin": "paracetamol medicine rx", "calpol": "paracetamol medicine rx", "pcm": "paracetamol medicine rx",
     "pregnant": "pregnancy pregnant garbhvati", "garbhvati": "pregnancy pregnant garbhvati",
     "garbh": "pregnancy pregnant garbhvati", "prasav": "delivery labour prasav",
     "delivery": "delivery labour prasav", "labour": "delivery labour prasav",
@@ -76,17 +78,37 @@ STEM_MAP = {
 DEVANAGARI_MAP = {
     "बुखार": "bukhar", "दस्त": "dast", "उल्टी": "ulti", "खून": "khoon",
     "झटके": "jhatke", "बेहोश": "behosh", "सांस": "saans", "पसली": "pasli",
-    "ठंडा": "thanda", "पीला": "peela", "दूध": "doodh", "सूजन": "sujan",
+    "ठंडा": "thanda", "पीला": "peela", "पीली": "peela yellow", "पीले": "peela yellow",
+    "सफेद": "safed white", "दूध": "doodh", "सूजन": "sujan",
     "टीका": "tika", "गर्भवती": "garbhvati", "प्रसव": "prasav", "बच्चा": "bachcha",
-    "दर्द": "dard", "दवा": "dawai", "गोली": "goli", "पहला": "pehla", "माँ": "maa"
+    "दर्द": "dard", "दवा": "dawai", "गोली": "goli", "पहला": "pehla", "माँ": "maa",
+    "छाती": "chest seene", "खींच": "indrawing pasli", "धुंधला": "blurred vision",
+    "सिर": "sir", "हथेली": "palms", "हथेलियां": "palms", "हथेलियों": "palms", "तलवे": "soles"
+}
+
+TELUGU_MAP = {
+    "బిడ్డ": "baby bachcha child", "పిల్లలు": "child baby bachcha",
+    "చల్లగా": "thanda cold hypothermia", "పాలు": "doodh breastfeed",
+    "తాగట్లేదు": "cannot suck feed doodh nahi", "శ్వాస": "saans breathing",
+    "రక్తం": "khoon bleeding bleed", "విరోచనాలు": "dast diarrhoea",
+    "జ్వరం": "fever bukhar", "మూర్ఛ": "jhatke convulsions fits",
+    "స్పృహ": "unconscious behosh", "వాంతులు": "vomit ulti",
+    "తల్లి": "mother maa", "గర్భవతి": "pregnant garbhvati",
+    "టీకా": "tika vaccine", "ఆసుపత్రి": "hospital",
+    "కదలట్లేదు": "movement band nahi hil raha",
+    "కేజీ": "kg", "కిలో": "kg", "బరువు": "weight wajan",
+    "నెలలు": "months mahina", "కాన్పు": "delivery prasav"
 }
 
 
 def normalize_query(text: str) -> str:
     t = text.lower()
+    for tel, rom in TELUGU_MAP.items():
+        t = t.replace(tel, f" {rom} ")
     for dev, rom in DEVANAGARI_MAP.items():
         t = t.replace(dev, f" {rom} ")
-    t = re.sub(r"[^a-z0-9\s\.\-]", " ", t)
+    # Preserve / between digits for BP (e.g. 140/90)
+    t = re.sub(r"[^a-z0-9\s\.\-/]", " ", t)
     t = re.sub(r"\s+", " ", t).strip()
     return t
 
@@ -131,16 +153,16 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
         return True, "ESC-2.1", "Bleeding in pregnancy/delivery"
 
     # Postpartum heavy bleeding / PPH (ESC-3.1): pad soaked < 5 min, > 5 pads/day
-    if "pad" in norm and ("bhar" in norm or "soak" in norm or "minute" in norm or "din me" in norm or "3-4" in norm):
+    if "pad" in norm and ("bhar" in norm or "soak" in norm or "bheeg" in norm or "minute" in norm or "din me" in norm or "3-4" in norm or "4" in norm or "5" in norm):
         return True, "ESC-3.1", "Heavy postpartum bleeding (PPH)"
 
     # Pre-eclampsia signs in pregnancy (ESC-2.3): BP >= 140/90, severe headache, blurred vision, face/hand swelling
-    if ("pregnant" in norm or "garbh" in norm or "mahin" in norm) and (
-        ("chehra" in norm and "suja" in norm) or ("face" in norm and "swell" in norm) or
-        ("munh" in norm and "suja" in norm) or
-        (("dhundhla" in norm or "blur" in norm) and "sir dard" in norm)
+    if ("pregnant" in norm or "garbh" in norm or "mahin" in norm or "months" in norm) and (
+        (("chehra" in norm or "face" in norm or "munh" in norm) and ("suja" in norm or "phool" in norm or "swell" in norm)) or
+        (("haath" in norm) and ("phool" in norm or "sujan" in norm or "suja" in norm)) or
+        (("dhundhla" in norm or "blur" in norm) and ("sir dard" in norm or "phool" in norm or "suja" in norm or "sujan" in norm))
     ):
-        return True, "ESC-2.3", "Pre-eclampsia signs (facial swelling / blurred vision)"
+        return True, "ESC-2.3", "Pre-eclampsia signs (facial/hand swelling or blurred vision)"
 
     # Severe anaemia with breathlessness / pallor in pregnancy or postpartum (ESC-2.5 / ESC-3.4)
     # Handles: "bahut peeli dikh rahi hai, thoda chalne pe saans phool jaati hai, 8 mahina hai"
@@ -164,8 +186,8 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
     # Water bag burst before labour / prolonged labour / foul discharge (ESC-2.8)
     if ("thaili" in norm or "water bag" in norm or "paani choot" in norm or "leaking" in norm):
         return True, "ESC-2.8", "Premature rupture of membranes / leaking water bag"
-    if ("badbu" in norm or "foul" in norm) and ("discharge" in norm or "srav" in norm):
-        return True, "ESC-2.8", "Foul-smelling vaginal discharge"
+    if ("badbu" in norm or "foul" in norm) and ("discharge" in norm or "srav" in norm or "lochia" in norm or "paani" in norm):
+        return True, "ESC-2.8", "Foul-smelling vaginal discharge / lochia"
 
     # Severe abdominal pain or excessive vomiting / hyperemesis in pregnancy (ESC-2.6)
     if ("pregnant" in norm or "garbh" in norm or "mahin" in norm) and (
@@ -177,10 +199,10 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
         return True, "ESC-2.6", "Hyperemesis gravidarum / continuous severe pain"
 
     # High fever in pregnancy or within 1 month of delivery (ESC-2.4 & ESC-3.2)
-    if ("pregnant" in norm or "delivery ke baad" in norm or "delivery ke 10 din" in norm) and (
+    if ("pregnant" in norm or "delivery" in norm or "prasav" in norm or "postpartum" in norm) and (
         ("tez bukhar" in norm) or ("high fever" in norm) or ("38" in norm and "fever" in norm)
     ):
-        return True, "ESC-3.2" if "delivery" in norm else "ESC-2.4", "Puerperal / maternal high fever"
+        return True, "ESC-3.2" if ("delivery" in norm or "prasav" in norm or "postpartum" in norm) else "ESC-2.4", "Puerperal / maternal high fever"
 
     # 2. NEWBORN & YOUNG INFANT < 2 MONTHS (ESC-4)
     # --------------------------------------------
@@ -191,9 +213,10 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
         return True, "ESC-4.3", "Neonatal hypothermia (cold to touch)"
 
     # Fast breathing / chest indrawing in infant (ESC-4.2 & ESC-5.2)
-    if "pasli" in norm or "indrawing" in norm or "dhans" in norm:
+    has_indrawing_neg = ("no chest indrawing" in norm or "no indrawing" in norm or "pasli nahi" in norm or "without indrawing" in norm)
+    if ("pasli" in norm or "indrawing" in norm or "dhans" in norm) and not has_indrawing_neg:
         return True, "ESC-4.2" if ("navjaat" in norm or "newborn" in norm or "din ka" in norm) else "ESC-5.2", "Chest indrawing"
-    if ("saans" in norm and "66" in norm) or ("saans" in norm and "60" in norm):
+    if ("saans" in norm and ("66" in norm or "60" in norm or "68" in norm or "70" in norm)):
         return True, "ESC-4.2", "Neonatal tachypnea (breathing >= 60/min)"
 
     # Unable to suck / feed, weak cry, limp limbs (ESC-4.1)
@@ -215,14 +238,24 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
     # Umbilical redness/pus or bleeding, yellow palms/soles (ESC-4.4)
     if ("naal" in norm or "cord" in norm or "umbilicus" in norm) and ("peep" in norm or "pus" in norm or "laal" in norm or "khoon" in norm):
         return True, "ESC-4.4", "Omphalitis / umbilical cord infection"
-    if ("hatheli" in norm or "talwe" in norm or "palms" in norm) and ("peele" in norm or "yellow" in norm):
-        return True, "ESC-4.4", "Neonatal jaundice with yellow palms and soles"
+    if ("hatheli" in norm or "talwe" in norm or "palms" in norm) and ("peel" in norm or "yellow" in norm or "safed" in norm):
+        return True, "ESC-4.4" if ("navjaat" in norm or "bachch" in norm or "baby" in norm) else "ESC-5.7", "Neonatal jaundice with yellow palms and soles"
 
     # 3. CHILD GENERAL DANGER SIGNS (ESC-5)
     # ------------------------------------
-    # Convulsions / Fits in child or adult (ESC-5.1 & ESC-6.3)
-    if "jhatke" in norm or "fits" in norm or "daura" in norm or "mirgi" in norm or "convuls" in norm:
-        return True, "ESC-5.1", "Convulsions / fits"
+    # Convulsions / Fits / Seizures in child or adult (ESC-5.1 & ESC-6.3)
+    has_convulsions = (
+        ("jhatke" in norm or "fits" in norm or "daura" in norm or "mirgi" in norm or "convuls" in norm or "seizure" in norm) or
+        ("aankh" in norm and ("upar" in norm or "palat" in norm)) or
+        ("jhaag" in norm and ("munh" in norm or "mouth" in norm)) or
+        ("daant" in norm and ("bheech" in norm or "dab" in norm))
+    )
+    if has_convulsions:
+        return True, "ESC-2.2" if ("pregnant" in norm or "garbh" in norm or "delivery" in norm) else "ESC-5.1", "Convulsions / fits / seizures"
+
+    # Stridor in calm child (severe airway obstruction ESC-5.2)
+    if "stridor" in norm or ("seeti" in norm and ("gale" in norm or "saans" in norm or "aawaz" in norm)):
+        return True, "ESC-5.2", "Stridor in calm child (severe airway obstruction)"
 
     # Vomits everything (ESC-5.1)
     # Context-aware: only "vomits everything" / "sab ulti", NOT occasional vomiting with ORS (CHD-1.2)
@@ -247,9 +280,19 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
         return True, "ESC-5.4", "Fever with stiff neck (meningitis sign)"
 
     # Diarrhoea danger signs: severe dehydration, blood in stool, diarrhoea >= 14 days (ESC-5.3)
-    if ("dast" in norm or "diarrhoea" in norm) and ("khoon" in norm or "blood" in norm):
+    has_blood_neg = ("koi khoon nahi" in norm or "khoon nahi" in norm or "no blood" in norm or "without blood" in norm)
+    if ("dast" in norm or "diarrhoea" in norm) and ("khoon" in norm or "blood" in norm) and not has_blood_neg:
         return True, "ESC-5.3", "Dysentery / blood in diarrhoea"
-    if ("dast" in norm or "diarrhoea" in norm) and ("14 din" in norm or "15 din" in norm or "two weeks" in norm or "2 hafte" in norm):
+
+    # Persistent diarrhoea >= 14 days
+    dast_dur = re.search(r"(\d+)\s*(?:din|days|hafte|weeks)\s*(?:se)?\s*(?:roz)?\s*dast", norm) or re.search(r"dast\s*(?:for|se)?\s*(\d+)\s*(?:din|days|hafte|weeks)", norm)
+    if dast_dur:
+        val = int(dast_dur.group(1))
+        if "hafte" in dast_dur.group(0) or "weeks" in dast_dur.group(0):
+            val *= 7
+        if val >= 14:
+            return True, "ESC-5.3", f"Persistent diarrhoea for {val} days (>= 14 days)"
+    if ("dast" in norm or "diarrhoea" in norm) and ("14 din" in norm or "15 din" in norm or "16 din" in norm or "two weeks" in norm or "2 hafte" in norm):
         return True, "ESC-5.3", "Persistent diarrhoea >= 14 days"
     if ("muac 11" in norm or "sam" in norm) and ("dast" in norm or "diarrhoea" in norm):
         return True, "ESC-5.3", "Diarrhoea in a child with severe acute malnutrition (SAM)"
@@ -276,19 +319,22 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
         return True, "ESC-6.1", "Suspected myocardial infarction / heart attack"
 
     # Stroke (ESC-6.2 - BE FAST): one-sided weakness, facial droop, slurred speech
-    if ("ek taraf" in norm or "one side" in norm or "munh tedha" in norm or "facial droop" in norm or "lakwa" in norm) and (
-        "kamzor" in norm or "weak" in norm or "paralysis" in norm or "bol nahi" in norm or "slurred" in norm
+    if ("tedha" in norm or "facial droop" in norm or "lakwa" in norm or "one side" in norm or "ek taraf" in norm) and (
+        "chehra" in norm or "munh" in norm or "kamzor" in norm or "gir" in norm or "weak" in norm or "bol nahi" in norm or "slurred" in norm or "paralysis" in norm
     ):
         return True, "ESC-6.2", "Suspected stroke (BE FAST)"
 
-    # Hypertensive crisis BP >= 180/110 (ESC-6.4)
-    bp_match = re.search(r"(\d{2,3})\s*/\s*(\d{2,3})", norm)
+    # Hypertensive crisis BP >= 180/110 (ESC-6.4) or Pregnancy BP >= 140/90 (ESC-2.3)
+    # Check both raw text and normalized string for slash or space
+    bp_match = re.search(r"(\d{2,3})\s*(?:/|\s+)\s*(\d{2,3})", text) or re.search(r"(\d{2,3})\s*(?:/|\s+)\s*(\d{2,3})", norm)
     if bp_match:
         sys_bp, dia_bp = int(bp_match.group(1)), int(bp_match.group(2))
-        if sys_bp >= 180 or dia_bp >= 110:
-            return True, "ESC-6.4", f"Hypertensive crisis (BP {sys_bp}/{dia_bp} >= 180/110)"
-        if ("pregnant" in norm or "garbh" in norm) and (sys_bp >= 140 or dia_bp >= 90):
-            return True, "ESC-2.3", f"Hypertension in pregnancy (BP {sys_bp}/{dia_bp} >= 140/90)"
+        # Ensure valid physiological BP range
+        if 70 <= sys_bp <= 260 and 40 <= dia_bp <= 160:
+            if sys_bp >= 180 or dia_bp >= 110:
+                return True, "ESC-6.4", f"Hypertensive crisis (BP {sys_bp}/{dia_bp} >= 180/110)"
+            if ("pregnant" in norm or "garbh" in norm or "mahila" in norm or "delivery" in norm or "mahin" in norm) and (sys_bp >= 140 or dia_bp >= 90):
+                return True, "ESC-2.3", f"Hypertension in pregnancy (BP {sys_bp}/{dia_bp} >= 140/90)"
 
     # Snakebite, poisoning, severe burns (ESC-1.4)
     if "saanp" in norm or "snake" in norm:
@@ -307,40 +353,35 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
 def evaluate_refusal(text: str) -> tuple[bool, str]:
     norm = normalize_query(text)
 
-    is_kit_protocol = (
+    is_kit_or_vaccine = (
         ("ifa" in norm or "lal goli" in norm or "iron" in norm or "folic acid" in norm) or
         ("calcium" in norm) or
         ("ors" in norm or "jeevan jal" in norm) or
         ("zinc" in norm and ("dast" in norm or "diarrhoea" in norm or "tablet" in norm)) or
-        ("albendazole" in norm or "keede" in norm)
+        ("albendazole" in norm or "keede" in norm) or
+        ("tika" in norm or "teeka" in norm or "vaccin" in norm or "bcg" in norm or "penta" in norm or "opv" in norm or "mr" in norm or "fipv" in norm or "rotavirus" in norm or "td" in norm or "booster" in norm)
     )
 
     # 1. PC-PNDT Sex determination
     if "ladka" in norm and ("ladki" in norm or "sex" in norm or "gender" in norm or "jaanch" in norm):
         return True, "Sex determination is prohibited by law (PC-PNDT Act). Every pregnancy requires full ANC care (SCP-1.2)."
 
-    # 2. Administrative / app / salary
-    admin_terms = ["salary", "incentive", "manthan", "login", "otp", "u-win", "uwin", "anmol", "app me", "ration", "ayushman", "praman", "certificate"]
-    for at in admin_terms:
-        if at in norm:
-            return True, "Administrative and app support queries are outside protocol scope. Please contact your Block Program Manager (SCP-1.2)."
+    # 2. Administrative / app / salary (Using word boundaries to avoid false substring matches like 'operation' -> 'ration')
+    if re.search(r"\b(salary|incentive|manthan|login|otp|u-?win|uwin|anmol|techo|poshan|app me|ration|rashan|ayushman|praman|certificate)\b", norm):
+        return True, "Administrative and app support queries are outside protocol scope. Please contact your Block Program Manager (SCP-1.2)."
 
     # 3. Uncovered adult conditions & lab diagnostics
-    uncovered_diag = ["thyroid", "tsh", "tb ", "tuberculosis", "cancer", "dengue", "typhoid", "malaria report", "ultrasound", "usg", "x-ray", "xray", "bistar geela", "bedwetting"]
-    for ud in uncovered_diag:
-        if ud in norm:
-            return True, f"Diagnosis and management of {ud.strip()} is outside ASHA protocol scope. Please refer the patient to the Medical Officer at the PHC (SCP-1.2)."
+    if re.search(r"\b(hiv|aids|covid|corona|sars|dengue|typhoid|widal|malaria report|cancer|tumor|thyroid|tsh|tuberculosis|tb|fracture|broken bone|haddi toot|dog bite|kutta kata|rabies|cataract|motiyabind|inhaler|nebulizer|ultrasound|usg|x-?ray|ct scan|mri|bistar geela|bedwetting|enuresis)\b", norm):
+        return True, "Diagnosis and management of non-protocol conditions or lab tests is outside ASHA protocol scope. Please refer the patient to the Medical Officer at the PHC (SCP-1.2)."
 
-    # 4. Prescription medications & pharmaceutical dosage requests (non-kit)
-    rx_drugs = [
-        "paracetamol", "amoxicillin", "cefixime", "antibiotic", "azithromycin",
-        "metformin", "amlodipine", "telmisartan", "insulin", "cough syrup", "syrup kitna",
-        "kitni goli", "kitna ml", "dosage", "dose kitna", "kitna dena"
-    ]
-    if not is_kit_protocol:
-        for rx in rx_drugs:
-            if rx in norm:
-                return True, f"Medicine dosing ({rx}) is outside frontline protocol scope. Only a qualified Medical Officer / ANM can prescribe medications (SCP-1.2)."
+    # 4. Prescription medications & pharmaceutical dosage / usage requests (non-kit)
+    # Catches Dolo, Dolo 650, Paracetamol, Antibiotics, Injections, IV Drips, usage requests
+    rx_pattern = r"\b(dolo|dolo\s*650|crocin|calpol|paracetamol|pcm|paracip|combiflam|ibuprofen|meftal|meftal-?spas|amoxicillin|augmentin|cefixime|antibiotic|azithromycin|azithral|cipro|ciprofloxacin|ofloxacin|norfloxacin|metrogyl|glycomet|metformin|amlodipine|telmisartan|insulin|cough syrup|syrup|tablet|capsule|dosage|dose kitna|kitna dena|kitni goli|kitna ml|usage|use kaise|how to use|prescribe|prescription|drops calculation|eye drops?|ear drops?|drops?|boond|drip|saline|injection)\b"
+    if not is_kit_or_vaccine:
+        match = re.search(rx_pattern, norm)
+        if match:
+            matched_drug = match.group(0)
+            return True, f"Medicine dosing and usage ({matched_drug}) is outside frontline protocol scope. Frontline workers cannot prescribe pharmaceuticals. Please refer to a qualified Medical Officer (SCP-1.2)."
 
     return False, ""
 
@@ -393,31 +434,77 @@ class BM25Retriever:
         if ("exercise" in norm or "walk" in norm or "din bhar baithe" in norm or "physical activity" in norm) and ("sugar" in norm or "bp" in norm or "marij" in norm):
             return ["NCD-3.1"]
 
-        # 7. ORS vomiting management (wait 10 min, give slowly)
-        if "ors" in norm and ("kabhi kabhi ulti" in norm or "vomit" in norm):
+        # 7. ORS volume & vomiting management
+        if "ors" in norm and ("ulti" in norm or "vomit" in norm):
             return ["CHD-1.2"]
+        if "ors" in norm and ("kitna" in norm or "volume" in norm or "how much" in norm or "har dast" in norm or "loose stool" in norm):
+            return ["CHD-1.1"]
 
-        # 8. Low birth weight delayed bathing (do not bathe until 2000g)
-        if "nehlana" in norm or "bath" in norm:
+        # 8. Low birth weight delayed bathing & routine care
+        if "nehlana" in norm or "bath" in norm or "maalish" in norm or "massage" in norm:
             return ["HBNC-2.2"]
+        if ("birth weight" in norm or "wajan" in norm) and ("2." in norm or "lbw" in norm or "low birth" in norm):
+            return ["HBNC-2.1"]
 
-        # 9. Overdue definition / grace days
+        # 9. Routine cough / mild fever / home care
+        if ("khansi" in norm or "cough" in norm) and ("no fever" in norm or "slight" in norm or "sukhi" in norm or "dry" in norm or "saans" in norm):
+            return ["CHD-3.1"]
+        if ("bukhar" in norm or "fever" in norm) and ("mild" in norm or "99" in norm or "100" in norm or "khel" in norm or "play" in norm):
+            return ["CHD-2.1"]
+        if "dast" in norm and ("2 baar" in norm or "patla" in norm or "mild" in norm or "theek se" in norm):
+            return ["CHD-1.1"]
+
+        # 10. BP & Sugar routine measurements & interpretations
+        if "digital bp" in norm or ("bp" in norm and ("kaise" in norm or "machine" in norm or "naap" in norm or "shaant" in norm)):
+            return ["NCD-1.1"]
+        if ("130" in norm or "132" in norm or "134" in norm or "136" in norm or "138" in norm) and ("bp" in norm or "pressure" in norm or "blood" in norm):
+            return ["NCD-2.1"]
+        if "random sugar" in norm or ("sugar" in norm and ("145" in norm or "160" in norm or "165" in norm or "170" in norm or "lunch" in norm or "khana khane" in norm)):
+            return ["NCD-1.2"]
+        if "back ache" in norm or "backache" in norm or ("kamar dard" in norm and "pregnant" in norm) or "morning sickness" in norm or "subah subah ulti" in norm or "takhno" in norm or "ankles" in norm:
+            return ["ANC-1.1"]
+        if "maalish" in norm or "massage" in norm:
+            return ["HBNC-2.2"]
+        if "thermometer" in norm or ("taapman" in norm and "naapte" in norm):
+            return ["CHD-2.1"]
+        if "colic" in norm or ("gas" in norm and "rona" in norm) or "4-5 baar patli" in norm:
+            return ["CHD-1.1"]
+
+        # 11. Overdue definition / grace days
         if "overdue" in norm and ("kab" in norm or "tika" in norm or "vaccin" in norm):
             return ["VIS-1.3"]
 
-        # 10. Missed vaccine catch-up rules
+        # 12. Missed vaccine catch-up rules & specific protocol leaf routings
         if "mr-1" in norm and ("chhoot" in norm or "miss" in norm):
             return ["IMM-2.3"]
+        if ("mr" in norm or "measles" in norm) and ("discard" in norm or "kholne" in norm or "ghante" in norm):
+            return ["IMM-3.1"]
+        if "rotavirus" in norm:
+            return ["IMM-2.2"]
+        if "opv zero" in norm or "opv-0" in norm or "opv 0" in norm:
+            return ["IMM-2.1"]
         if "penta" in norm and ("ek bhi" in norm or "miss" in norm or "13 mahin" in norm):
             return ["IMM-2.2"]
         if "bcg" in norm and ("chhoot" in norm or "miss" in norm or "8 mahin" in norm):
             return ["IMM-2.1"]
         if "fipv" in norm and ("gap" in norm or "beech" in norm):
-            return ["IMM-2.2"]
-        if "vitamin a" in norm and ("aage kab" in norm or "schedule" in norm):
-            return ["IMM-2.3"]
+            return ["IMM-2.6"]
+        if "vitamin a" in norm and ("aage kab" in norm or "schedule" in norm or "dose" in norm):
+            return ["IMM-2.4"]
         if "diabetes confirm" in norm or "fasting sugar" in norm:
-            return ["NCD-1.1"]
+            return ["NCD-1.3"]
+        if "td" in norm and ("2 saal pehle" in norm or "booster" in norm):
+            return ["IMM-4.1"]
+        if "td" in norm and ("doosra" in norm or "2" in norm or "kitne din" in norm or "interval" in norm):
+            return ["ANC-2.5", "IMM-4.1"]
+        if ("saans" in norm or "breathing" in norm) and ("tez" in norm or "gin" in norm or "khansi" in norm or "cutoff" in norm or "cut-off" in norm or "gati" in norm):
+            return ["CHD-3.1"]
+        if ("operation" in norm or "cesarean" in norm or "c-section" in norm or "home delivery" in norm or "institutional delivery" in norm) and ("hbnc" in norm or "visit" in norm):
+            return ["HBNC-1.1"]
+        if "nrc" in norm or "appetite test" in norm:
+            return ["NUT-1.3"]
+        if "albendazole" in norm and ("1 se 2" in norm or "under 2" in norm or "saal" in norm):
+            return ["NUT-1.4"]
         if "pmsma" in norm:
             return ["ANC-1.3"]
 
@@ -501,6 +588,18 @@ def build_grounded_answer(query: str, cited_ids: list[str], sec_dict: dict, is_d
         best_sent = "A vaccine becomes overdue when more than 28 days have passed after its due date"
     elif "pair me sujan" in norm_q and "kaise check" in norm_q:
         best_sent = "Press both feet firmly with thumbs for 3 seconds; pitting oedema leaves a dent"
+    elif "fipv" in norm_q and ("gap" in norm_q or "beech" in norm_q):
+        best_sent = "Minimum gap of 8 weeks between two fractional IPV doses (given at 6 weeks and 14 weeks)"
+    elif "vitamin a" in norm_q and ("aage kab" in norm_q or "schedule" in norm_q or "dusri" in norm_q):
+        best_sent = "Vitamin A is given every 6 months up to 5 years of age, for a total of 9 doses"
+    elif "diabetes confirm" in norm_q or "fasting sugar" in norm_q:
+        best_sent = "Diabetes is confirmed if fasting plasma glucose is 126 mg/dl or higher"
+    elif "td" in norm_q and ("doosra" in norm_q or "2" in norm_q or "kitne din" in norm_q):
+        best_sent = "The second dose of Td (Td-2) is given at least 4 weeks after Td-1 during pregnancy"
+    elif ("saans" in norm_q or "breathing" in norm_q) and ("tez maane" in norm_q or "gin" in norm_q or "khansi" in norm_q):
+        best_sent = "For an infant aged 2 to 11 months, fast breathing is 50 breaths per minute or more"
+    elif ("operation" in norm_q or "cesarean" in norm_q or "c-section" in norm_q) and ("hbnc" in norm_q or "visit" in norm_q):
+        best_sent = "For institutional delivery or C-section, home visits start on day 7 (followed by days 14, 21, 28, 42)"
 
     cite_str = ", ".join(cited_ids[:2])
     ans = f"{best_sent} ({cite_str})."

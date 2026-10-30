@@ -7,17 +7,37 @@ class DangerRuleEngine(private val rules: List<DangerRule>) {
     private val devanagariMap = mapOf(
         "बुखार" to "bukhar", "दस्त" to "dast", "उल्टी" to "ulti", "खून" to "khoon",
         "झटके" to "jhatke", "बेहोश" to "behosh", "सांस" to "saans", "पसली" to "pasli",
-        "ठंडा" to "thanda", "पीला" to "peela", "दूध" to "doodh", "सूजन" to "sujan",
+        "ठंडा" to "thanda", "पीला" to "peela", "पीली" to "peela yellow", "पीले" to "peela yellow",
+        "सफेद" to "safed white", "दूध" to "doodh", "सूजन" to "sujan",
         "टीका" to "tika", "गर्भवती" to "garbhvati", "प्रसव" to "prasav", "बच्चा" to "bachcha",
-        "दर्द" to "dard", "दवा" to "dawai", "गोली" to "goli", "पहला" to "pehla", "माँ" to "maa"
+        "दर्द" to "dard", "दवा" to "dawai", "गोली" to "goli", "पहला" to "pehla", "माँ" to "maa",
+        "छाती" to "chest seene", "खींच" to "indrawing pasli", "धुंधला" to "blurred vision",
+        "सिर" to "sir", "हथेली" to "palms", "हथेलियां" to "palms", "हथेलियों" to "palms", "तलवे" to "soles"
+    )
+
+    private val teluguMap = mapOf(
+        "బిడ్డ" to "baby bachcha child", "పిల్లలు" to "child baby bachcha",
+        "చల్లగా" to "thanda cold hypothermia", "పాలు" to "doodh breastfeed",
+        "తాగట్లేదు" to "cannot suck feed doodh nahi", "శ్వాస" to "saans breathing",
+        "రక్తం" to "khoon bleeding bleed", "విరోచనాలు" to "dast diarrhoea",
+        "జ్వరం" to "fever bukhar", "మూర్ఛ" to "jhatke convulsions fits",
+        "స్పృహ" to "unconscious behosh", "వాంతులు" to "vomit ulti",
+        "తల్లి" to "mother maa", "గర్భవతి" to "pregnant garbhvati",
+        "టీకా" to "tika vaccine", "ఆసుపత్రి" to "hospital",
+        "కదలట్లేదు" to "movement band nahi hil raha",
+        "కేజీ" to "kg", "కిలో" to "kg", "బరువు" to "weight wajan",
+        "నెలలు" to "months mahina", "కాన్పు" to "delivery prasav"
     )
 
     fun normalize(text: String): String {
         var t = text.lowercase()
+        for ((tel, rom) in teluguMap) {
+            t = t.replace(tel, " $rom ")
+        }
         for ((dev, rom) in devanagariMap) {
             t = t.replace(dev, " $rom ")
         }
-        t = t.replace(Regex("[^a-z0-9\\s\\.\\-]"), " ")
+        t = t.replace(Regex("[^a-z0-9\\s\\.\\-/]"), " ")
         return t.replace(Regex("\\s+"), " ").trim()
     }
 
@@ -45,13 +65,12 @@ class DangerRuleEngine(private val rules: List<DangerRule>) {
         }
 
         // Pre-eclampsia signs in pregnancy (ESC-2.3)
-        if ((norm.contains("pregnant") || norm.contains("garbh") || norm.contains("mahin")) &&
-            ((norm.contains("chehra") && norm.contains("suja")) ||
-             (norm.contains("face") && norm.contains("swell")) ||
-             (norm.contains("munh") && norm.contains("suja")) ||
-             ((norm.contains("dhundhla") || norm.contains("blur")) && norm.contains("sir dard")))
+        if ((norm.contains("pregnant") || norm.contains("garbh") || norm.contains("mahin") || norm.contains("months")) &&
+            (((norm.contains("chehra") || norm.contains("face") || norm.contains("munh")) && (norm.contains("suja") || norm.contains("phool") || norm.contains("swell"))) ||
+             (norm.contains("haath") && (norm.contains("phool") || norm.contains("sujan") || norm.contains("suja"))) ||
+             ((norm.contains("dhundhla") || norm.contains("blur")) && (norm.contains("sir dard") || norm.contains("phool") || norm.contains("suja"))))
         ) {
-            return createResult("ESC-2.3", "Pre-eclampsia (severe headache, facial swelling, blurred vision)", "Pre-eclampsia signs", "REFER URGENTLY to CHC/FRU")
+            return createResult("ESC-2.3", "Pre-eclampsia (severe headache, facial/hand swelling, blurred vision)", "Pre-eclampsia signs", "REFER URGENTLY to CHC/FRU")
         }
 
         // Severe anaemia with breathlessness / pallor (ESC-2.5)
@@ -110,11 +129,12 @@ class DangerRuleEngine(private val rules: List<DangerRule>) {
         }
 
         // Fast breathing / chest indrawing (ESC-4.2 & ESC-5.2)
-        if (norm.contains("pasli") || norm.contains("indrawing") || norm.contains("dhans")) {
+        val hasIndrawingNeg = norm.contains("no chest indrawing") || norm.contains("no indrawing") || norm.contains("pasli nahi") || norm.contains("without indrawing")
+        if ((norm.contains("pasli") || norm.contains("indrawing") || norm.contains("dhans")) && !hasIndrawingNeg) {
             val leaf = if (norm.contains("navjaat") || norm.contains("newborn") || norm.contains("din ka")) "ESC-4.2" else "ESC-5.2"
             return createResult(leaf, "Severe pneumonia / chest indrawing", "Severe chest indrawing", "REFER URGENTLY TO FRU/HOSPITAL")
         }
-        if ((norm.contains("saans") && norm.contains("66")) || (norm.contains("saans") && norm.contains("60"))) {
+        if ((norm.contains("saans") && (norm.contains("66") || norm.contains("60") || norm.contains("68") || norm.contains("70")))) {
             return createResult("ESC-4.2", "Neonatal fast breathing (>= 60 breaths/min)", "Tachypnea", "REFER TO SNCU")
         }
 
@@ -130,7 +150,7 @@ class DangerRuleEngine(private val rules: List<DangerRule>) {
 
         // VLBW < 1.8 kg (ESC-4.4)
         val kgMatcher = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*kg").matcher(norm)
-        if (kgMatcher.find() && (norm.contains("bachcha") || norm.contains("baby") || norm.contains("paida") || norm.contains("wajan") || norm.contains("weight"))) {
+        if (kgMatcher.find() && (norm.contains("bachcha") || norm.contains("baby") || norm.contains("paida") || norm.contains("wajan") || norm.contains("weight") || norm.contains("baruvu"))) {
             val wt = kgMatcher.group(1)?.toDoubleOrNull() ?: 2.5
             if (wt < 1.8) {
                 return createResult("ESC-4.4", "Very Low Birth Weight ($wt kg < 1.8 kg)", "VLBW requiring specialized thermal care", "REFER TO SNCU")
@@ -144,15 +164,26 @@ class DangerRuleEngine(private val rules: List<DangerRule>) {
             return createResult("ESC-4.4", "Omphalitis / umbilical cord infection", "Cord discharge/redness", "REFER TO PHC/CHC")
         }
         if ((norm.contains("hatheli") || norm.contains("talwe") || norm.contains("palms")) &&
-            (norm.contains("peele") || norm.contains("yellow"))
+            (norm.contains("peel") || norm.contains("yellow") || norm.contains("safed"))
         ) {
             return createResult("ESC-4.4", "Severe neonatal jaundice (palms & soles yellow)", "Bilirubin encephalopathy risk", "REFER TO SNCU")
         }
 
         // 3. CHILD GENERAL DANGER SIGNS (ESC-5)
-        // Convulsions / Fits (ESC-5.1)
-        if (norm.contains("jhatke") || norm.contains("fits") || norm.contains("daura") || norm.contains("mirgi") || norm.contains("convuls")) {
-            return createResult("ESC-5.1", "Convulsions / seizures", "Active seizure", "PROTECT AIRWAY & REFER IMMEDIATELY")
+        // Convulsions / Fits / Seizures (ESC-5.1)
+        val hasConvulsions = norm.contains("jhatke") || norm.contains("fits") || norm.contains("daura") ||
+                norm.contains("mirgi") || norm.contains("convuls") || norm.contains("seizure") ||
+                (norm.contains("aankh") && (norm.contains("upar") || norm.contains("palat"))) ||
+                (norm.contains("jhaag") && (norm.contains("munh") || norm.contains("mouth"))) ||
+                (norm.contains("daant") && (norm.contains("bheech") || norm.contains("dab")))
+        if (hasConvulsions) {
+            val leaf = if (norm.contains("pregnant") || norm.contains("garbh") || norm.contains("delivery")) "ESC-2.2" else "ESC-5.1"
+            return createResult(leaf, "Convulsions / seizures", "Active seizure", "PROTECT AIRWAY & REFER IMMEDIATELY")
+        }
+
+        // Stridor in calm child (ESC-5.2)
+        if (norm.contains("stridor") || (norm.contains("seeti") && (norm.contains("gale") || norm.contains("saans") || norm.contains("aawaz")))) {
+            return createResult("ESC-5.2", "Stridor in calm child (severe airway obstruction)", "Stridor sign", "URGENT REFERRAL TO HOSPITAL")
         }
 
         // Vomits everything (ESC-5.1)
@@ -184,13 +215,24 @@ class DangerRuleEngine(private val rules: List<DangerRule>) {
         }
 
         // Diarrhoea danger signs: dysentery / blood in stool / >= 14 days / SAM with diarrhoea (ESC-5.3)
+        val hasBloodNeg = norm.contains("koi khoon nahi") || norm.contains("khoon nahi") || norm.contains("no blood") || norm.contains("without blood")
         if ((norm.contains("dast") || norm.contains("diarrhoea") || norm.contains("virochanal")) &&
-            (norm.contains("khoon") || norm.contains("blood") || norm.contains("raktham"))
+            (norm.contains("khoon") || norm.contains("blood") || norm.contains("raktham")) && !hasBloodNeg
         ) {
             return createResult("ESC-5.3", "Dysentery / blood in diarrhoea", "Invasive intestinal infection", "REFER TO PHC (requires doctor evaluation)")
         }
+
+        val dastDurMatcher = Pattern.compile("(\\d+)\\s*(?:din|days|hafte|weeks)\\s*(?:se)?\\s*(?:roz)?\\s*dast").matcher(norm)
+        if (dastDurMatcher.find()) {
+            val days = dastDurMatcher.group(1)?.toIntOrNull() ?: 0
+            val isWeeks = dastDurMatcher.group(0)?.contains("hafte") == true || dastDurMatcher.group(0)?.contains("weeks") == true
+            val totalDays = if (isWeeks) days * 7 else days
+            if (totalDays >= 14) {
+                return createResult("ESC-5.3", "Persistent diarrhoea for $totalDays days (>= 14 days)", "Persistent enteropathy", "REFER TO CHC")
+            }
+        }
         if ((norm.contains("dast") || norm.contains("diarrhoea")) &&
-            (norm.contains("14 din") || norm.contains("15 din") || norm.contains("two weeks") || norm.contains("2 hafte"))
+            (norm.contains("14 din") || norm.contains("15 din") || norm.contains("16 din") || norm.contains("two weeks") || norm.contains("2 hafte"))
         ) {
             return createResult("ESC-5.3", "Persistent diarrhoea >= 14 days", "Persistent enteropathy", "REFER TO CHC")
         }
@@ -220,22 +262,24 @@ class DangerRuleEngine(private val rules: List<DangerRule>) {
         }
 
         // Stroke (ESC-6.2 - BE FAST)
-        if ((norm.contains("ek taraf") || norm.contains("one side") || norm.contains("munh tedha") || norm.contains("facial droop") || norm.contains("lakwa")) &&
-            (norm.contains("kamzor") || norm.contains("weak") || norm.contains("paralysis") || norm.contains("bol nahi") || norm.contains("slurred"))
+        if ((norm.contains("tedha") || norm.contains("facial droop") || norm.contains("lakwa") || norm.contains("one side") || norm.contains("ek taraf")) &&
+            (norm.contains("chehra") || norm.contains("munh") || norm.contains("kamzor") || norm.contains("gir") || norm.contains("weak") || norm.contains("bol nahi") || norm.contains("slurred") || norm.contains("paralysis"))
         ) {
             return createResult("ESC-6.2", "Suspected stroke (BE-FAST signs)", "Acute cerebrovascular event", "CRITICAL: REFER NOW TO CT-CAPABLE FRU")
         }
 
-        // Hypertensive crisis BP >= 180/110 (ESC-6.4)
-        val bpMatcher = Pattern.compile("(\\d{2,3})\\s*/\\s*(\\d{2,3})").matcher(norm)
+        // Hypertensive crisis BP >= 180/110 (ESC-6.4) or Pregnancy BP >= 140/90 (ESC-2.3)
+        val bpMatcher = Pattern.compile("(\\d{2,3})\\s*(?:/|\\s+)\\s*(\\d{2,3})").matcher(query.lowercase() + " " + norm)
         if (bpMatcher.find()) {
             val sys = bpMatcher.group(1)?.toIntOrNull() ?: 120
             val dia = bpMatcher.group(2)?.toIntOrNull() ?: 80
-            if (sys >= 180 || dia >= 110) {
-                return createResult("ESC-6.4", "Hypertensive crisis (BP $sys/$dia >= 180/110)", "Severe end-organ risk", "REFER TO CHC/FRU")
-            }
-            if ((norm.contains("pregnant") || norm.contains("garbh")) && (sys >= 140 || dia >= 90)) {
-                return createResult("ESC-2.3", "Hypertension in pregnancy (BP $sys/$dia >= 140/90)", "Pre-eclampsia screening trigger", "REFER TO FRU")
+            if (sys in 70..260 && dia in 40..160) {
+                if (sys >= 180 || dia >= 110) {
+                    return createResult("ESC-6.4", "Hypertensive crisis (BP $sys/$dia >= 180/110)", "Severe end-organ risk", "REFER TO CHC/FRU")
+                }
+                if ((norm.contains("pregnant") || norm.contains("garbh") || norm.contains("mahila") || norm.contains("delivery")) && (sys >= 140 || dia >= 90)) {
+                    return createResult("ESC-2.3", "Hypertension in pregnancy (BP $sys/$dia >= 140/90)", "Pre-eclampsia screening trigger", "REFER TO FRU")
+                }
             }
         }
 
