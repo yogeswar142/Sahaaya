@@ -68,6 +68,24 @@ python evaluate.py
 ================================================================
 ```
 
+### Official Submission Files (Healthcare Track H5)
+In strict compliance with the **TalentAP Mega Hackathon Data Guide (Step 8, Page 7)**, all required submission files are located in `submission/`:
+- `submission/H5_answers.jsonl`: Protocol answers, leaf section citations, and escalation/refusal decisions for all 200 test questions (`data/questions_test.csv`).
+- `submission/H5_visit_list.csv`: Clinical-urgency prioritized visit list for the 500-household register (`data/household_register.csv`).
+- `submission/H5_footprint.json`: Hardware footprint report (offline mode, peak RAM, model size, CPU latency).
+
+To reproduce and regenerate the submission files from source:
+```bash
+# 1. Generate H5_answers.jsonl & H5_footprint.json
+python scripts/clinical_pipeline.py
+
+# 2. Generate H5_visit_list.csv
+python scripts/generate_visit_list.py
+
+# 3. Score against development truth
+python evaluate.py
+```
+
 ### Environment Configuration
 Copy the sample environment file (no secrets or paid API tokens are required):
 ```bash
