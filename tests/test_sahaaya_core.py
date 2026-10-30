@@ -67,6 +67,11 @@ def test_danger_sign_recall_is_100_percent(query, expected_leaf):
     "Child has slight dry cough for 2 days, no fever, no chest indrawing",
     "elderly person random sugar test 165 mg/dl after eating rice lunch",
     "7 mahine ki garbhvati mahila ke shaam ko takhno ankles me thodi sujan hoti hai, subah gayab ho jati hai, BP 118/76 hai",
+    "pregnant woman 8 months, no bleeding, feeling good",
+    "mother delivered 2 days ago, no bleeding, no fever",
+    "child had fever yesterday, no fits, no convulsions, active today",
+    "delivery ke baad koi khoon nahi aa raha, maa theek hai",
+    "8 mahine ki garbhvati mahila, jhatke nahi aaye, normal checkup",
 ])
 def test_zero_false_escalation_on_benign_queries(query):
     """Ensures hospital referral gates are not flooded with routine/benign cases."""

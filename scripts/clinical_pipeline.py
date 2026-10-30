@@ -179,8 +179,23 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
 
     # 1. OBSTETRIC / PREGNANCY & POSTPARTUM EMERGENCIES (ESC-2 & ESC-3)
     # -----------------------------------------------------------------
+    has_negated_bleeding = bool(
+        re.search(r"\b(no|not|without|koi|zero)\s+(?:vaginal\s+)?(bleeding|bleed|khoon|rakt\w*)\b", norm) or
+        re.search(r"\b(bleeding|bleed|khoon|rakt\w*|raktha\s*sravam)\s+(?:hai\s+)?(nahi|nahi hai|ledu|lekapovadam)\b", norm)
+    )
+
+    has_negated_convulsions = bool(
+        re.search(r"\b(no|not|without|koi|zero)\s+(?:general\s+)?(fits|convulsions?|seizures?|jhatke|daura|mirgi)\b", norm) or
+        re.search(r"\b(fits|convulsions?|seizures?|jhatke|daura|mirgi)\s+(?:hai\s+)?(nahi|nahi hai|ledu|levu)\b", norm)
+    )
+
+    has_negated_fever = bool(
+        re.search(r"\b(no|not|without|koi|zero)\s+(?:high\s+)?(fever|bukhar|jwaram)\b", norm) or
+        re.search(r"\b(fever|bukhar|jwaram)\s+(?:hai\s+)?(nahi|nahi hai|ledu)\b", norm)
+    )
+
     # Bleeding in pregnancy, delivery or postpartum (ESC-2.1 & ESC-3.1)
-    if ("khoon" in norm or "bleed" in norm or "rakt" in norm or "raktha sravam" in norm) and (
+    if not has_negated_bleeding and ("khoon" in norm or "bleed" in norm or "rakt" in norm or "raktha sravam" in norm) and (
         "pregnant" in norm or "garbh" in norm or "deliver" in norm or "prasav" in norm or "postpartum" in norm or "mahin" in norm or "pet" in norm or "anc" in norm
     ):
         is_pph = "deliver" in norm or "prasav" in norm or "postpartum" in norm or "pad" in norm
@@ -206,7 +221,7 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
         return True, "ESC-2.5", "Severe anaemia with breathlessness"
 
     # Fits / Convulsions in pregnancy or postpartum (ESC-2.2 & ESC-3.3)
-    if ("pregnant" in norm or "garbh" in norm or "delivery" in norm) and (
+    if not has_negated_convulsions and ("pregnant" in norm or "garbh" in norm or "delivery" in norm) and (
         "jhatke" in norm or "fits" in norm or "daura" in norm or "mirgi" in norm or "behosh" in norm
     ):
         return True, "ESC-2.2", "Convulsions/unconsciousness in pregnancy/labour"
@@ -233,7 +248,7 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
         return True, "ESC-2.6", "Hyperemesis gravidarum / continuous severe pain"
 
     # High fever in pregnancy or within 1 month of delivery (ESC-2.4 & ESC-3.2)
-    if ("pregnant" in norm or "delivery" in norm or "prasav" in norm or "postpartum" in norm) and (
+    if not has_negated_fever and ("pregnant" in norm or "delivery" in norm or "prasav" in norm or "postpartum" in norm) and (
         ("tez bukhar" in norm) or ("high fever" in norm) or ("38" in norm and "fever" in norm)
     ):
         return True, "ESC-3.2" if ("delivery" in norm or "prasav" in norm or "postpartum" in norm) else "ESC-2.4", "Puerperal / maternal high fever"
@@ -290,7 +305,7 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
     # 3. CHILD GENERAL DANGER SIGNS (ESC-5)
     # ------------------------------------
     # Convulsions / Fits / Seizures in child or adult (ESC-5.1 & ESC-6.3)
-    has_convulsions = (
+    has_convulsions = not has_negated_convulsions and (
         ("jhatke" in norm or "fits" in norm or "daura" in norm or "mirgi" in norm or "convuls" in norm or "seizure" in norm) or
         ("aankh" in norm and ("upar" in norm or "palat" in norm)) or
         ("jhaag" in norm and ("munh" in norm or "mouth" in norm)) or

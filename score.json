@@ -23,7 +23,7 @@
   "n_visit_truth_rows": 39,
   "n_visit_pred_rows_in_scope": 39,
   "visit_list_file_present": true,
-  "median_latency_ms_reported": 0.2955,
+  "median_latency_ms_reported": 0.3205,
   "footprint_reported": {
     "model_names": [
       "Sahaaya-Deterministic-Clinical-Pipeline",
@@ -32,7 +32,7 @@
     ],
     "model_size_mb": 0.35,
     "peak_ram_mb": 42.5,
-    "median_latency_ms_cpu": 0.296,
+    "median_latency_ms_cpu": 0.321,
     "offline": true
   }
 }

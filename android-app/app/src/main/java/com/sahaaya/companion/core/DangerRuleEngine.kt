@@ -51,8 +51,17 @@ class DangerRuleEngine(private val rules: List<DangerRule>) {
         }
 
         // 1. OBSTETRIC / PREGNANCY & POSTPARTUM EMERGENCIES (ESC-2 & ESC-3)
+        val hasNegatedBleeding = Pattern.compile("\\b(no|not|without|koi|zero)\\s+(?:vaginal\\s+)?(bleeding|bleed|khoon|rakt\\w*)\\b").matcher(norm).find() ||
+                Pattern.compile("\\b(bleeding|bleed|khoon|rakt\\w*|raktha\\s*sravam)\\s+(?:hai\\s+)?(nahi|nahi hai|ledu|lekapovadam)\\b").matcher(norm).find()
+
+        val hasNegatedConvulsions = Pattern.compile("\\b(no|not|without|koi|zero)\\s+(?:general\\s+)?(fits|convulsions?|seizures?|jhatke|daura|mirgi)\\b").matcher(norm).find() ||
+                Pattern.compile("\\b(fits|convulsions?|seizures?|jhatke|daura|mirgi)\\s+(?:hai\\s+)?(nahi|nahi hai|ledu|levu)\\b").matcher(norm).find()
+
+        val hasNegatedFever = Pattern.compile("\\b(no|not|without|koi|zero)\\s+(?:high\\s+)?(fever|bukhar|jwaram)\\b").matcher(norm).find() ||
+                Pattern.compile("\\b(fever|bukhar|jwaram)\\s+(?:hai\\s+)?(nahi|nahi hai|ledu)\\b").matcher(norm).find()
+
         // Bleeding in pregnancy/delivery/postpartum (ESC-2.1 & ESC-3.1)
-        if ((norm.contains("khoon") || norm.contains("bleed") || norm.contains("rakt") || norm.contains("raktha sravam")) &&
+        if (!hasNegatedBleeding && (norm.contains("khoon") || norm.contains("bleed") || norm.contains("rakt") || norm.contains("raktha sravam")) &&
             (norm.contains("pregnant") || norm.contains("garbh") || norm.contains("deliver") ||
              norm.contains("prasav") || norm.contains("postpartum") || norm.contains("mahin") || norm.contains("pet") || norm.contains("anc"))
         ) {
@@ -83,7 +92,7 @@ class DangerRuleEngine(private val rules: List<DangerRule>) {
         }
 
         // Fits / Convulsions in pregnancy or postpartum (ESC-2.2 & ESC-3.3)
-        if ((norm.contains("pregnant") || norm.contains("garbh") || norm.contains("delivery")) &&
+        if (!hasNegatedConvulsions && (norm.contains("pregnant") || norm.contains("garbh") || norm.contains("delivery")) &&
             (norm.contains("jhatke") || norm.contains("fits") || norm.contains("daura") || norm.contains("mirgi") || norm.contains("behosh"))
         ) {
             return createResult("ESC-2.2", "Eclampsia / convulsions in pregnancy", "Maternal convulsions/fits", "CRITICAL: REFER NOW to FRU")
@@ -115,7 +124,7 @@ class DangerRuleEngine(private val rules: List<DangerRule>) {
         }
 
         // High fever in pregnancy or delivery (ESC-2.4 & ESC-3.2)
-        if ((norm.contains("pregnant") || norm.contains("delivery ke baad") || norm.contains("delivery ke 10 din")) &&
+        if (!hasNegatedFever && (norm.contains("pregnant") || norm.contains("delivery ke baad") || norm.contains("delivery ke 10 din")) &&
             (norm.contains("tez bukhar") || norm.contains("high fever") || (norm.contains("38") && norm.contains("fever")))
         ) {
             val leaf = if (norm.contains("delivery")) "ESC-3.2" else "ESC-2.4"
@@ -196,11 +205,11 @@ class DangerRuleEngine(private val rules: List<DangerRule>) {
 
         // 3. CHILD GENERAL DANGER SIGNS (ESC-5)
         // Convulsions / Fits / Seizures (ESC-5.1)
-        val hasConvulsions = norm.contains("jhatke") || norm.contains("fits") || norm.contains("daura") ||
+        val hasConvulsions = !hasNegatedConvulsions && (norm.contains("jhatke") || norm.contains("fits") || norm.contains("daura") ||
                 norm.contains("mirgi") || norm.contains("convuls") || norm.contains("seizure") ||
                 (norm.contains("aankh") && (norm.contains("upar") || norm.contains("palat"))) ||
                 (norm.contains("jhaag") && (norm.contains("munh") || norm.contains("mouth"))) ||
-                (norm.contains("daant") && (norm.contains("bheech") || norm.contains("dab")))
+                (norm.contains("daant") && (norm.contains("bheech") || norm.contains("dab"))))
         if (hasConvulsions) {
             val leaf = if (norm.contains("pregnant") || norm.contains("garbh") || norm.contains("delivery")) "ESC-2.2" else "ESC-5.1"
             return createResult(leaf, "Convulsions / seizures", "Active seizure", "PROTECT AIRWAY & REFER IMMEDIATELY")
