@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import argparse
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 import pandas as pd
 
@@ -68,12 +68,22 @@ def parse_date(val) -> date | None:
     if not val or pd.isna(val):
         return None
     s = str(val).strip()
-    if not s:
+    if not s or s.lower() in ("nan", "none", "null", "nat", ""):
         return None
     try:
-        return date.fromisoformat(s)
+        d = date.fromisoformat(s)
+        if 1920 <= d.year <= TODAY.year + 2:
+            return d
     except ValueError:
-        return None
+        pass
+    for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%d.%m.%Y"):
+        try:
+            d = datetime.strptime(s, fmt).date()
+            if 1920 <= d.year <= TODAY.year + 2:
+                return d
+        except ValueError:
+            continue
+    return None
 
 
 def parse_bp(bp_str: str) -> tuple[int, int] | None:

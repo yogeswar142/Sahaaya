@@ -103,6 +103,20 @@ class IntentGate {
                     citations = listOf("SCP-1.2")
                 )
             }
+
+            // Indirect dosage / home tampering / crushing / home medicine evasion
+            val homeTamper = Pattern.compile(
+                "\\b(crush|grind|pees\\s*kar|tod\\s*kar|aadha\\s*tod|first\\s*aid\\s*box|medicine\\s*box|dawai\\s*box|ghar\\s*ki\\s*dawa|purani\\s*dawa)\\b|" +
+                "\\b(store\\s+is\\s+closed|medical\\s+store\\s+band)\\b"
+            )
+            if (homeTamper.matcher(lower).find()) {
+                return GateResult(
+                    isRefusal = true,
+                    refusalMessage = "Prescribing improvised or crushed home medicines is strictly outside ASHA protocol scope. Please consult a qualified Medical Officer (SCP-1.2).",
+                    reason = "HOME_REMEDY_TAMPER_OUT_OF_SCOPE",
+                    citations = listOf("SCP-1.2")
+                )
+            }
         }
 
         return GateResult(isRefusal = false)

@@ -6,6 +6,6 @@
   ],
   "model_size_mb": 0.35,
   "peak_ram_mb": 42.5,
-  "median_latency_ms_cpu": 0.321,
+  "median_latency_ms_cpu": 0.387,
   "offline": true
 }

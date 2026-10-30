@@ -174,7 +174,8 @@ class SahaayaPipeline(
             "how are you", "sahaaya", "sahaya", "kya haal hai", "help",
             "madad", "sahayata", "test", "testing", "ok", "theek hai",
             "thank you", "thanks", "dhanyawad", "dhanyavadalu", "shukriya",
-            "bye", "alvida", "good night", "hie", "helo", "hy", "hii", "hiii"
+            "bye", "alvida", "good night", "hie", "helo", "hy", "hii", "hiii",
+            "asdf", "qwerty", "abc", "xyz"
         )
         if (exactPhrases.contains(trimmed)) return true
 

@@ -206,12 +206,12 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
         return True, "ESC-3.1", "Heavy postpartum bleeding (PPH)"
 
     # Pre-eclampsia signs in pregnancy (ESC-2.3): BP >= 140/90, severe headache, blurred vision, face/hand swelling
-    if ("pregnant" in norm or "garbh" in norm or "mahin" in norm or "months" in norm) and (
+    if ("pregnant" in norm or "garbh" in norm or "mahin" in norm or "months" in norm or "mother" in norm) and (
         (("chehra" in norm or "face" in norm or "munh" in norm) and ("suja" in norm or "phool" in norm or "swell" in norm)) or
         (("haath" in norm) and ("phool" in norm or "sujan" in norm or "suja" in norm)) or
-        (("dhundhla" in norm or "blur" in norm) and ("sir dard" in norm or "phool" in norm or "suja" in norm or "sujan" in norm))
+        (any(x in norm for x in ["dhundhla", "blur", "vision"]) and any(x in norm for x in ["sir dard", "headache", "phool", "suja", "sujan", "high bp", "bp"]))
     ):
-        return True, "ESC-2.3", "Pre-eclampsia signs (facial/hand swelling or blurred vision)"
+        return True, "ESC-2.3", "Pre-eclampsia signs (facial/hand swelling or blurred vision / severe headache)"
 
     # Severe anaemia with breathlessness / pallor in pregnancy or postpartum (ESC-2.5 / ESC-3.4)
     # Handles: "bahut peeli dikh rahi hai, thoda chalne pe saans phool jaati hai, 8 mahina hai"
@@ -248,23 +248,36 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
         return True, "ESC-2.6", "Hyperemesis gravidarum / continuous severe pain"
 
     # High fever in pregnancy or within 1 month of delivery (ESC-2.4 & ESC-3.2)
-    if not has_negated_fever and ("pregnant" in norm or "delivery" in norm or "prasav" in norm or "postpartum" in norm) and (
-        ("tez bukhar" in norm) or ("high fever" in norm) or ("38" in norm and "fever" in norm)
-    ):
-        return True, "ESC-3.2" if ("delivery" in norm or "prasav" in norm or "postpartum" in norm) else "ESC-2.4", "Puerperal / maternal high fever"
+    temp_match = (
+        re.search(r"\b(?:temp(?:erature)?|taapman|fever|bukhar)\s*[:=]?\s*(\d{2,3}(?:\.\d+)?)\s*(?:deg(?:rees?)?)?\s*([cf])?\b", norm) or
+        re.search(r"\b(\d{2,3}(?:\.\d+)?)\s*(?:deg(?:rees?)?|\u00b0)?\s*([cf])\b", norm)
+    )
+    if not has_negated_fever and ("pregnant" in norm or "delivery" in norm or "prasav" in norm or "postpartum" in norm or "garbh" in norm):
+        if ("tez bukhar" in norm) or ("high fever" in norm):
+            return True, "ESC-3.2" if ("delivery" in norm or "prasav" in norm or "postpartum" in norm) else "ESC-2.4", "Puerperal / maternal high fever"
+        if temp_match:
+            val = float(temp_match.group(1))
+            unit = temp_match.group(2)
+            if (unit == "c" and val >= 38.0) or (unit == "f" and val >= 100.4) or (not unit and 38.0 <= val <= 43.0) or (not unit and val >= 100.4):
+                return True, "ESC-3.2" if ("delivery" in norm or "prasav" in norm or "postpartum" in norm) else "ESC-2.4", f"Puerperal / maternal high fever (Temp {val})"
 
     # 2. NEWBORN & YOUNG INFANT < 2 MONTHS (ESC-4)
     # --------------------------------------------
-    # Hypothermia (ESC-4.3): cold to touch (thanda lag raha hai)
-    if ("bachcha" in norm or "baby" in norm or "navjaat" in norm or "din" in norm or "shishu" in norm) and (
-        "thanda" in norm or "cold to touch" in norm or "sheetal" in norm
-    ):
-        return True, "ESC-4.3", "Neonatal hypothermia (cold to touch)"
+    # Hypothermia (ESC-4.3): cold to touch (thanda lag raha hai) or Temp < 35.5 C / < 95.9 F
+    is_infant = any(x in norm for x in ["bachcha", "baby", "navjaat", "shishu"]) or bool(re.search(r"\b\d+\s*din\b", norm))
+    if is_infant:
+        if "thanda" in norm or "cold to touch" in norm or "sheetal" in norm:
+            return True, "ESC-4.3", "Neonatal hypothermia (cold to touch)"
+        if temp_match:
+            val = float(temp_match.group(1))
+            unit = temp_match.group(2)
+            if (unit == "c" and val < 35.5) or (unit == "f" and val < 95.9) or (not unit and val <= 35.4):
+                return True, "ESC-4.3", f"Neonatal hypothermia (Temp {val} < 35.5 C / 95.9 F)"
 
     # Fast breathing / chest indrawing in infant (ESC-4.2 & ESC-5.2)
     has_indrawing_neg = ("no chest indrawing" in norm or "no indrawing" in norm or "pasli nahi" in norm or "without indrawing" in norm)
-    if ("pasli" in norm or "indrawing" in norm or "dhans" in norm) and not has_indrawing_neg:
-        return True, "ESC-4.2" if ("navjaat" in norm or "newborn" in norm or "din ka" in norm) else "ESC-5.2", "Chest indrawing"
+    if ("pasli" in norm or "indrawing" in norm or "dhans" in norm or "ribs sinking" in norm or "sinking in" in norm) and not has_indrawing_neg:
+        return True, "ESC-4.2" if ("navjaat" in norm or "newborn" in norm or "din ka" in norm or "baby" in norm) else "ESC-5.2", "Chest indrawing"
     # Fast breathing (tachypnea >= 60 breaths/min, ESC-4.2)
     br_match = re.search(r'(?:saans|breath(?:ing)?|respirat(?:ion|ory))\s*(?:rate)?\s*(?:is)?\s*[:=]?\s*(\d{2,3})', norm) or re.search(r'(\d{2,3})\s*(?:breaths?|saans|/min|per minute)', norm)
     if br_match:
@@ -295,6 +308,13 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
         wt = float(lbw_match.group(1))
         if wt < 1.8:
             return True, "ESC-4.4", f"Very low birth weight ({wt} kg < 1.8 kg -> SNCU)"
+
+    wt_lbs = re.search(r"(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?)\b", norm)
+    if wt_lbs and any(x in norm for x in ["birth", "baby", "bachch", "born", "paida", "weight", "wajan", "baruvu"]):
+        lbs = float(wt_lbs.group(1))
+        wt_kg = lbs * 0.4536
+        if wt_kg < 1.8:
+            return True, "ESC-4.4", f"Very low birth weight ({lbs} lbs = {wt_kg:.2f} kg < 1.8 kg -> SNCU)"
 
     # Umbilical redness/pus or bleeding, yellow palms/soles (ESC-4.4)
     if ("naal" in norm or "cord" in norm or "umbilicus" in norm) and ("peep" in norm or "pus" in norm or "laal" in norm or "khoon" in norm):
@@ -402,12 +422,13 @@ def evaluate_danger(text: str) -> tuple[bool, str | None, str | None]:
             if is_maternal and (sys_bp >= 140 or dia_bp >= 90):
                 return True, "ESC-2.3", f"Hypertension in pregnancy (BP {sys_bp}/{dia_bp} >= 140/90)"
 
-    # Snakebite, poisoning, severe burns in Hindi, English & Telugu (ESC-1.4)
-    if any(x in norm for x in ["saanp", "snake", "pamu", "paamu"]):
+    # Snakebite, poisoning, severe burns in Hindi, English & Telugu / Tribal dialects (ESC-1.4)
+    if any(x in norm for x in ["saanp", "snake", "pamu", "paamu", "taachu", "katla pamu", "nagu pamu", "pinjari", "godchi", "sarpa"]):
         return True, "ESC-1.4", "Snakebite emergency"
-    if any(x in norm for x in ["zahar", "poison", "kerosene", "mitti ka tel", "visham"]) or (("mandhu" in norm or "mandu" in norm) and any(x in norm for x in ["taag", "drink"])):
+    if any(x in norm for x in ["zahar", "poison", "kerosene", "mitti ka tel", "visham", "purugula mandu", "gaddi mandu", "chetlu mandu", "cheelam mandu", "matsya mandu"]) or \
+       (("mandhu" in norm or "mandu" in norm) and any(x in norm for x in ["taag", "drink", "ming", "swallow"])):
         return True, "ESC-1.4", "Poisoning / chemical ingestion"
-    if any(x in norm for x in ["jal gaya", "severe burn", "kaalina"]):
+    if any(x in norm for x in ["jal gaya", "severe burn", "kaalina", "kaalipoyi", "kaalindi", "mantallo"]):
         return True, "ESC-1.4", "Severe burn emergency"
 
     return False, None, None
@@ -474,6 +495,14 @@ def evaluate_refusal(text: str) -> tuple[bool, str]:
         which_med = r"\b(konsi|kaunsi|which|what|kya)\b.*?\b(dawa(?:i)?|medicine|goli|tablet|syrup)\b"
         if re.search(which_med, norm):
             return True, "Selecting or prescribing pharmaceutical treatments is outside ASHA protocol scope. Please refer the patient to a doctor (SCP-1.2)."
+
+        # Indirect dosage / home tampering / crushing / home medicine evasion
+        home_tamper = (
+            re.search(r"\b(crush|grind|pees\s*kar|tod\s*kar|aadha\s*tod|first\s*aid\s*box|medicine\s*box|dawai\s*box|ghar\s*ki\s*dawa|purani\s*dawa)\b", norm) or
+            re.search(r"\b(store\s+is\s+closed|medical\s+store\s+band)\b", norm)
+        )
+        if home_tamper:
+            return True, "Prescribing improvised or crushed home medicines is strictly outside ASHA protocol scope. Please consult a qualified Medical Officer (SCP-1.2)."
 
     return False, ""
 

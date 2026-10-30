@@ -1,9 +1,32 @@
 package com.sahaaya.companion.core
 
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
 class VisitListEngine {
+
+    fun parseDate(raw: String?, defaultDate: LocalDate): LocalDate {
+        if (raw.isNullOrBlank()) return defaultDate
+        val clean = raw.trim()
+        if (clean.equals("nan", ignoreCase = true) || clean.equals("null", ignoreCase = true) ||
+            clean.equals("none", ignoreCase = true) || clean.equals("nat", ignoreCase = true)) {
+            return defaultDate
+        }
+        try {
+            val d = LocalDate.parse(clean)
+            if (d.year in 1920..(defaultDate.year + 2)) return d
+        } catch (_: Exception) {}
+
+        val patterns = listOf("d/M/yyyy", "d-M-yyyy", "yyyy/M/d", "d.M.yyyy")
+        for (pattern in patterns) {
+            try {
+                val d = LocalDate.parse(clean, DateTimeFormatter.ofPattern(pattern))
+                if (d.year in 1920..(defaultDate.year + 2)) return d
+            } catch (_: Exception) {}
+        }
+        return defaultDate
+    }
 
     fun prioritizeVisits(
         members: List<RegisterMember>,
@@ -12,11 +35,7 @@ class VisitListEngine {
         val prioritized = mutableListOf<PrioritizedVisit>()
 
         for (member in members) {
-            val dueDate = try {
-                LocalDate.parse(member.dueDate)
-            } catch (e: Exception) {
-                today
-            }
+            val dueDate = parseDate(member.dueDate, today)
 
             val daysDiff = ChronoUnit.DAYS.between(today, dueDate)
             val hasDanger = member.dangerFlag.isNotBlank() && !member.dangerFlag.equals("NONE", ignoreCase = true)

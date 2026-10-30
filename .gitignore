@@ -13,6 +13,7 @@ downloaded_protocols/
 tmp_slides/
 test-runner.jar
 scripts/template.pdf
+*detailed.csv
 
 # OS and IDE files
 .idea/

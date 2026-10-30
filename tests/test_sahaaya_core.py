@@ -48,6 +48,16 @@ ROOT = Path(__file__).resolve().parents[1]
     ("polam lo pamu katesindi kaalu vaachipoyindi", "ESC-1.4"),
     ("pulla mandu taagesadu", "ESC-1.4"),
     ("vishamu taagindi", "ESC-1.4"),
+    ("pregnant woman has high fever temp 39 C", "ESC-2.4"),
+    ("delivery ke 4 din baad bukhar 102 F", "ESC-3.2"),
+    ("baby born today birth weight is 3.5 lbs", "ESC-4.4"),
+    ("newborn baby temp 34.5 C cold to touch", "ESC-4.3"),
+    ("polam lo taachu pamu katesindi", "ESC-1.4"),
+    ("katla pamu karichindi", "ESC-1.4"),
+    ("pinjari pamu bite", "ESC-1.4"),
+    ("purugula mandu taagesaru", "ESC-1.4"),
+    ("gaddi mandu mingindi", "ESC-1.4"),
+    ("cheyyi kaalipoyindi mantallo", "ESC-1.4"),
 ])
 def test_danger_sign_recall_is_100_percent(query, expected_leaf):
     """Crucial safety test: Every life-threatening emergency MUST trigger escalation."""
@@ -107,6 +117,9 @@ def test_zero_false_escalation_on_benign_queries(query):
     ("35 year old man has jaundice and yellow eyes", "adult_jaundice"),
     ("copper t lagwana hai sub-centre pe", "family_planning"),
     ("kukka karichindi injection eppudu veyali", "dog_bite"),
+    ("dolo 650 ko crush karke pees kar aadha bachche ko de sakte hain kya", "crush"),
+    ("medical store band hai ghar ki purani dawa de dein kya", "store_closed"),
+    ("first aid box me se purani goli tod kar pilayein kya", "first_aid_box"),
 ])
 def test_malpractice_and_scope_refusal(query, expected_sub):
     """Enforces MoHFW ASHA non-prescribing guidelines and malpractice protection."""
@@ -204,3 +217,18 @@ def test_submission_artifacts_exist_and_conform():
     assert fp["offline"] is True
     assert fp["model_size_mb"] < 100.0
     assert fp["peak_ram_mb"] < 500.0
+
+
+def test_resilient_date_parsing():
+    """Validates multi-format resilient date parsing for messy household CSVs."""
+    from scripts.generate_visit_list import parse_date
+    from datetime import date
+    assert parse_date("2026-10-18") == date(2026, 10, 18)
+    assert parse_date("18/10/2026") == date(2026, 10, 18)
+    assert parse_date("18-10-2026") == date(2026, 10, 18)
+    assert parse_date("2026/10/18") == date(2026, 10, 18)
+    assert parse_date("18.10.2026") == date(2026, 10, 18)
+    assert parse_date("nan") is None
+    assert parse_date("null") is None
+    assert parse_date("") is None
+    assert parse_date("3000-01-01") is None
