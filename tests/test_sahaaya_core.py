@@ -168,6 +168,10 @@ def test_visit_engine_priority_triage():
     """Validates the algorithmic triage logic across the household register."""
     reg_path = ROOT / "guidlines-etc" / "H5_Frontline_Health_Worker_Companion" / "data" / "household_register.csv"
     if not reg_path.exists():
+        reg_path = ROOT / "android-app" / "app" / "src" / "main" / "assets" / "household_register.csv"
+    if not reg_path.exists():
+        reg_path = ROOT / "assets" / "household_register.csv"
+    if not reg_path.exists():
         pytest.skip("Full household register not present in test environment")
 
     df = generate_visit_list(reg_path, TODAY)
